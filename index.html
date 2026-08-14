@@ -571,6 +571,7 @@
   function save() {
     try {
       localStorage.setItem(KEY, JSON.stringify(state.tasks));
+      mirrorWidget();
       clearWarn();
     } catch (e) {
       warn('저장에 실패했습니다. 완료함을 비워 공간을 확보한 뒤 다시 시도해 주세요.');
@@ -581,6 +582,7 @@
 
   var CAP = window.Capacitor || null;
   var LN = (CAP && CAP.Plugins && CAP.Plugins.LocalNotifications) || null;
+  var PREF = (CAP && CAP.Plugins && CAP.Plugins.Preferences) || null;
   var NATIVE = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform() && LN);
   var SET = 'dolist.notify.v1';
   var DAILY_ID = 9001;
@@ -655,6 +657,48 @@
     } catch (e) {
       warn('알림을 예약하지 못했습니다. 폰 설정에서 할일관리의 알림 권한을 확인해 주세요.');
     }
+  }
+
+  /* ---------- 홈 화면 위젯용 사본 ---------- */
+
+  function widgetItems() {
+    var today = todayISO();
+    var list = state.tasks.filter(function (x) {
+      if (x.done) return false;
+      if (!x.due) return true;
+      return x.due === today || dayDiff(x.due) > 0;
+    });
+    var order = { A: 0, B: 1, C: 2 };
+    list.sort(function (a, b) {
+      var la = a.due ? dayDiff(a.due) : 0, lb = b.due ? dayDiff(b.due) : 0;
+      if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
+      if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      return (a.due || '9999').localeCompare(b.due || '9999');
+    });
+    return list;
+  }
+
+  function mirrorWidget() {
+    if (!PREF) return;
+    var d = new Date();
+    var days = ['일', '월', '화', '수', '목', '금', '토'];
+    var list = widgetItems();
+    var late = list.filter(function (t) { return t.due && dayDiff(t.due) > 0; }).length;
+
+    var payload = {
+      head: (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + days[d.getDay()] + '요일',
+      sub: '남은 일 ' + list.length + (late ? ' · 밀린 일 ' + late : ''),
+      items: list.slice(0, 5).map(function (t) {
+        var late1 = t.due && dayDiff(t.due) > 0;
+        return {
+          p: t.prio,
+          t: t.title,
+          m: late1 ? dayDiff(t.due) + '일 밀림' : (t.progress || 0) + '%'
+        };
+      })
+    };
+
+    try { PREF.set({ key: 'widget_today', value: JSON.stringify(payload) }); } catch (e) {}
   }
 
   function renderBell() {
@@ -1019,6 +1063,7 @@
   load();
   render();
   renderBell();
+  mirrorWidget();
   if (NATIVE) syncNotifications();
 })();
 </script>
