@@ -813,14 +813,17 @@
         <input type="text" id="tp-owner" placeholder="이름" autocomplete="off">
       </div>
       <div class="tp-field">
-        <label class="tp-label" for="tp-due">마감</label>
-        <input type="date" id="tp-due">
+        <label class="tp-label" for="tp-on">표시 날짜</label>
+        <input type="date" id="tp-on">
       </div>
     </div>
 
     <div class="tp-field">
-      <label class="tp-label" for="tp-remind">알림 시각 · 기본 오전 8시, 비우면 알림 없음</label>
-      <input type="time" id="tp-remind">
+      <label class="tp-label">알림 날짜 · 시각 · 시각을 비우면 알림 없음</label>
+      <div class="tp-row2">
+        <input type="date" id="tp-due">
+        <input type="time" id="tp-remind">
+      </div>
     </div>
 
     <button class="tp-submit" id="tp-save">목록에 넣기</button>
@@ -910,6 +913,12 @@
     return y + '-' + String(m).padStart(2, '0');
   }
 
+  function lateDays(t) {
+    if (t.done || !t.due) return 0;
+    var d = dayDiff(t.due);
+    return d > 0 ? d : 0;
+  }
+
   function relLabel(iso) {
     var d = dayDiff(iso);
     if (d === 0) return '오늘';
@@ -939,6 +948,14 @@
       state.tasks = [];
       warn('저장된 목록을 읽지 못했습니다. 새 목록으로 시작합니다.');
     }
+    // 기존 데이터 이관: 표시 날짜가 없던 항목은 마감 날짜를 표시 날짜로 사용
+    var moved = 0;
+    state.tasks.forEach(function (t) {
+      if (!t.on) { t.on = t.due || todayISO(); moved++; }
+      if (!t.due) t.due = t.on;
+    });
+    if (moved) { try { localStorage.setItem(KEY, JSON.stringify(state.tasks)); } catch (e) {} }
+
     var o = localStorage.getItem(OWNER);
     if (o) el('tp-owner').value = o;
   }
@@ -1021,7 +1038,7 @@
         list.push({
           id: nidFor(t),
           title: '[' + t.prio + '] ' + t.title,
-          body: (t.owner ? t.owner + ' · ' : '') + '마감 ' + fmtDue(t.due),
+          body: (t.owner ? t.owner + ' · ' : '') + '알림 ' + fmtDue(t.due),
           schedule: { at: at, allowWhileIdle: true }
         });
       });
@@ -1040,15 +1057,15 @@
     var today = todayISO();
     var list = state.tasks.filter(function (x) {
       if (x.done) return false;
-      if (!x.due) return true;
-      return x.due === today || dayDiff(x.due) > 0;
+      if (!x.on) return true;
+      return x.on === today || dayDiff(x.on) > 0;
     });
     var order = { A: 0, B: 1, C: 2 };
     list.sort(function (a, b) {
-      var la = a.due ? dayDiff(a.due) : 0, lb = b.due ? dayDiff(b.due) : 0;
+      var la = a.on ? dayDiff(a.on) : 0, lb = b.on ? dayDiff(b.on) : 0;
       if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
       if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
-      return (a.due || '9999').localeCompare(b.due || '9999');
+      return (a.on || '9999').localeCompare(b.on || '9999');
     });
     return list;
   }
@@ -1064,26 +1081,26 @@
     function flat(t) { return String(t.title || '').replace(/\s+/g, ' ').trim(); }
     function byPrio(a, b) {
       if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
-      return (a.due || '9999').localeCompare(b.due || '9999');
+      return (a.on || '9999').localeCompare(b.on || '9999');
     }
 
     var open = state.tasks.filter(function (x) { return !x.done; });
 
     var todayList = open.filter(function (t) {
-      return !t.due || t.due === today || dayDiff(t.due) > 0;
+      return !t.on || t.on === today || dayDiff(t.on) > 0;
     }).sort(function (a, b) {
-      var la = a.due ? dayDiff(a.due) : 0, lb = b.due ? dayDiff(b.due) : 0;
+      var la = lateDays(a), lb = lateDays(b);
       if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
       return byPrio(a, b);
     });
 
     var nextList = open.filter(function (t) {
-      return t.due && dayDiff(t.due) < 0;
+      return t.on && dayDiff(t.on) < 0;
     }).sort(function (a, b) {
-      return (a.due || '').localeCompare(b.due || '') || byPrio(a, b);
+      return (a.on || '').localeCompare(b.on || '') || byPrio(a, b);
     });
 
-    var late = todayList.filter(function (t) { return t.due && dayDiff(t.due) > 0; }).length;
+    var late = todayList.filter(function (t) { return lateDays(t) > 0; }).length;
 
     function shortDate(iso) {
       var p = iso.split('-');
@@ -1093,16 +1110,16 @@
     var payload = {
       head: (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + days[d.getDay()] + '요일',
       sub: '오늘 ' + todayList.length + '건 · 예정 ' + nextList.length + '건' +
-        (late ? ' · 밀림 ' + late : ''),
+        (late ? ' · 지연 ' + late : ''),
       today: todayList.slice(0, 4).map(function (t) {
         return {
           p: t.prio,
           t: flat(t),
-          d: (t.due && dayDiff(t.due) > 0) ? dayDiff(t.due) + '일 밀림' : '오늘'
+          d: lateDays(t) > 0 ? lateDays(t) + '일 지연' : '오늘'
         };
       }),
       next: nextList.slice(0, 4).map(function (t) {
-        return { p: t.prio, t: flat(t), d: shortDate(t.due) };
+        return { p: t.prio, t: flat(t), d: shortDate(t.on) };
       })
     };
 
@@ -1145,11 +1162,11 @@
     el('tp-today-btn').className = 'tp-today-btn' + (isToday ? '' : ' on');
 
     var open = state.tasks.filter(function (t) { return !t.done; });
-    var late = open.filter(function (t) { return t.due && dayDiff(t.due) > 0; });
+    var late = open.filter(function (t) { return lateDays(t) > 0; });
     var dayN = dayList().length;
 
     var s = '<span>이 날 <b>' + dayN + '</b></span><span>남은 일 <b>' + open.length + '</b></span>';
-    if (late.length) s += '<span class="late">밀린 일 ' + late.length + '</span>';
+    if (late.length) s += '<span class="late">지연 ' + late.length + '</span>';
     if (state.tab === 'day') s += '<span class="hint">날짜 좌우 스와이프</span>';
     el('tp-stat').innerHTML = s;
 
@@ -1162,8 +1179,8 @@
     var iso = state.date, isToday = iso === todayISO();
     return state.tasks.filter(function (x) {
       if (x.done) return false;
-      if (!x.due) return isToday;
-      return x.due === iso || (isToday && dayDiff(x.due) > 0);
+      if (!x.on) return isToday;
+      return x.on === iso || (isToday && dayDiff(x.on) > 0);
     });
   }
 
@@ -1176,10 +1193,10 @@
     var order = { A: 0, B: 1, C: 2 };
     list.sort(function (a, b) {
       if (t === 'done') return (b.doneAt || 0) - (a.doneAt || 0);
-      var la = a.due ? dayDiff(a.due) : -999, lb = b.due ? dayDiff(b.due) : -999;
+      var la = lateDays(a), lb = lateDays(b);
       if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
       if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
-      return (a.due || '9999').localeCompare(b.due || '9999');
+      return (a.on || '9999').localeCompare(b.on || '9999');
     });
     return list;
   }
@@ -1195,14 +1212,17 @@
   }
 
   function taskHTML(t) {
-    var late = !t.done && t.due && dayDiff(t.due) > 0;
+    var late = lateDays(t) > 0;
     var meta = [];
     if (t.owner) meta.push('<span>' + esc(t.owner) + '</span>');
-    meta.push('<span>' + esc(fmtDue(t.due)) + '</span>');
-    if (late) meta.push('<span class="late">' + dayDiff(t.due) + '일 밀림</span>');
+    meta.push('<span>' + esc(fmtDue(t.on)) + '</span>');
+    if (late) meta.push('<span class="late">' + lateDays(t) + '일 지연</span>');
     if (t.done && t.doneAt) meta.push('<span>' + hhmm(t.doneAt) + ' 완료</span>');
     if (!t.done) meta.push('<span>' + (t.progress || 0) + '%</span>');
-    if (!t.done && t.remind) meta.push('<span>\u23F0 ' + esc(t.remind) + '</span>');
+    if (!t.done && t.remind) {
+      var sameDay = !t.due || t.due === t.on;
+      meta.push('<span>\u23F0 ' + (sameDay ? '' : esc(fmtDue(t.due)) + ' ') + esc(t.remind) + '</span>');
+    }
 
     var notes = '';
     if (t.notes && t.notes.length) {
@@ -1242,10 +1262,10 @@
 
     var byDate = {};
     state.tasks.forEach(function (t) {
-      if (t.done || !t.due) return;
-      if (!byDate[t.due]) byDate[t.due] = { n: 0, a: false };
-      byDate[t.due].n++;
-      if (t.prio === 'A') byDate[t.due].a = true;
+      if (t.done || !t.on) return;
+      if (!byDate[t.on]) byDate[t.on] = { n: 0, a: false };
+      byDate[t.on].n++;
+      if (t.prio === 'A') byDate[t.on].a = true;
     });
 
     var h = '<div class="tp-cal-nav">' +
@@ -1281,7 +1301,7 @@
       String(d.getDate()).padStart(2, '0');
     state.calMonth = state.date.slice(0, 7);
     if (state.page !== 'edit' && el('tp-form').classList.contains('on')) {
-      el('tp-due').value = state.date;
+      el('tp-on').value = state.date;
     }
   }
 
@@ -1310,22 +1330,22 @@
   function pageList() {
     var iso = state.date, isToday = iso === todayISO();
     return state.tasks.filter(function (x) {
-      if (!x.due) return isToday;
-      if (x.due === iso) return true;
-      return isToday && !x.done && dayDiff(x.due) > 0;
+      if (!x.on) return isToday;
+      if (x.on === iso) return true;
+      return isToday && !x.done && dayDiff(x.on) > 0;
     }).sort(function (a, b) {
       if (a.done !== b.done) return a.done ? 1 : -1;
       var order = { A: 0, B: 1, C: 2 };
-      var la = a.due ? dayDiff(a.due) : 0, lb = b.due ? dayDiff(b.due) : 0;
+      var la = lateDays(a), lb = lateDays(b);
       if (!a.done && (la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
       if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
-      return (a.due || '9999').localeCompare(b.due || '9999');
+      return (a.on || '9999').localeCompare(b.on || '9999');
     });
   }
 
   function statusChip(t) {
     if (t.done) return '<span class="tp-chip done">완료</span>';
-    if (t.due && dayDiff(t.due) > 0) return '<span class="tp-chip late">' + dayDiff(t.due) + '일 지연</span>';
+    if (lateDays(t) > 0) return '<span class="tp-chip late">' + lateDays(t) + '일 지연</span>';
     if (t.progress > 0) return '<span class="tp-chip prog">' + t.progress + '%</span>';
     return '<span class="tp-chip">대기</span>';
   }
@@ -1356,8 +1376,10 @@
     var rows = list.map(function (t) {
       var meta = [];
       if (t.owner) meta.push(esc(t.owner));
-      if (t.remind && !t.done) meta.push('\u23F0 ' + esc(t.remind));
-      if (t.due && t.due !== iso) meta.push('마감 ' + esc(fmtDue(t.due)));
+      if (t.remind && !t.done) {
+        meta.push('\u23F0 ' + ((!t.due || t.due === t.on) ? '' : fmtDue(t.due) + ' ') + esc(t.remind));
+      }
+      if (t.on && t.on !== iso) meta.push('표시 ' + esc(fmtDue(t.on)));
       return '<button class="tp-tr' + (t.done ? ' is-done' : '') + '" data-prio="' + esc(t.prio) +
         '" data-act="edit" data-id="' + t.id + '">' +
         '<span class="pr">' + (t.done ? '\u2713' : esc(t.prio)) + '</span>' +
@@ -1414,9 +1436,10 @@
         t.title = title;
         t.owner = owner;
         t.prio = state.prio;
-        t.due = el('tp-due').value || state.date;
+        t.on = el('tp-on').value || state.date;
+        t.due = el('tp-due').value || t.on;
         t.remind = el('tp-remind').value || null;
-        state.date = t.due;
+        state.date = t.on;
         state.calMonth = state.date.slice(0, 7);
         state.tab = 'day';
       }
@@ -1428,7 +1451,8 @@
     state.tasks.push({
       id: 't' + Date.now() + Math.floor(Math.random() * 900 + 100),
       title: title, owner: owner, prio: state.prio,
-      due: el('tp-due').value || state.date,
+      on: el('tp-on').value || state.date,
+      due: el('tp-due').value || el('tp-on').value || state.date,
       remind: el('tp-remind').value || null,
       nid: (function () {
         var n = Number(localStorage.getItem('dolist.nid') || '1');
@@ -1438,7 +1462,7 @@
       progress: 0, notes: [], done: false, createdAt: Date.now()
     });
     el('tp-title').value = '';
-    state.date = state.tasks[state.tasks.length - 1].due;
+    state.date = state.tasks[state.tasks.length - 1].on;
     state.calMonth = state.date.slice(0, 7);
     state.tab = 'day';
     closeForm();
@@ -1461,13 +1485,15 @@
     if (t) {
       el('tp-title').value = t.title;
       el('tp-owner').value = t.owner || '';
-      el('tp-due').value = t.due || state.date;
+      el('tp-on').value = t.on || state.date;
+      el('tp-due').value = t.due || t.on || state.date;
       el('tp-remind').value = t.remind || '';
       state.prio = t.prio;
       el('tp-save').textContent = '수정 저장';
       el('tp-cancel').textContent = '수정 취소';
     } else {
       el('tp-title').value = '';
+      el('tp-on').value = state.date;
       el('tp-due').value = state.date;
       el('tp-remind').value = '08:00';
       el('tp-save').textContent = '목록에 넣기';
@@ -1532,7 +1558,7 @@
       state.date = b.dataset.date;
       state.tab = 'day';
       state.noteOpen = null;
-      if (el('tp-form').classList.contains('on')) el('tp-due').value = state.date;
+      if (el('tp-form').classList.contains('on')) el('tp-on').value = state.date;
       syncTabs(); render(); return;
     }
     if (b.dataset.mon) {
@@ -1590,10 +1616,10 @@
   });
 
   el('tp-copy').addEventListener('click', function () {
-    var open = state.tasks.filter(function (t) { return !t.done && (!t.due || dayDiff(t.due) >= 0); });
+    var open = state.tasks.filter(function (t) { return !t.done && (!t.on || dayDiff(t.on) >= 0); });
     var lines = open.map(function (t) {
-      var late = t.due && dayDiff(t.due) > 0 ? ' (' + dayDiff(t.due) + '일 밀림)' : '';
-      return '[' + t.prio + '] ' + t.title + ' \u2014 ' + fmtDue(t.due) + ' ' + (t.progress || 0) + '%' + late;
+      var late = lateDays(t) > 0 ? ' (' + lateDays(t) + '일 지연)' : '';
+      return '[' + t.prio + '] ' + t.title + ' \u2014 ' + fmtDue(t.on) + ' ' + (t.progress || 0) + '%' + late;
     });
     copyText('오늘 할 일\n' + (lines.length ? lines.join('\n') : '없음'), this, '목록');
   });
@@ -1797,7 +1823,8 @@
         title: String(t.title),
         owner: t.owner ? String(t.owner) : '',
         prio: (t.prio === 'A' || t.prio === 'B' || t.prio === 'C') ? t.prio : 'B',
-        due: t.due || todayISO(),
+        on: t.on || t.due || todayISO(),
+        due: t.due || t.on || todayISO(),
         remind: t.remind || null,
         progress: Number(t.progress) || 0,
         notes: Array.isArray(t.notes) ? t.notes : [],
