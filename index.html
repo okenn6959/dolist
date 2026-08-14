@@ -598,6 +598,113 @@
   }
   .tp-page-bar strong { font-size: 16px; font-weight: 700; }
 
+  /* 권한 안내 모달 */
+  .tp-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 23, 28, .58);
+    z-index: 60;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+  }
+  .tp-modal.on { display: flex; }
+  .tp-modal-card {
+    background: var(--card);
+    border-radius: 15px;
+    padding: 20px 18px 14px;
+    max-width: 360px;
+    width: 100%;
+  }
+  .tp-modal-card h2 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .tp-modal-card p {
+    margin: 0 0 15px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+  .tp-modal-card .prim {
+    width: 100%;
+    background: var(--ink);
+    color: #fff;
+    border: 0;
+    border-radius: 9px;
+    padding: 13px;
+    font-family: var(--sans);
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tp-modal-card .sec {
+    width: 100%;
+    background: var(--card);
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 12px;
+    font-family: var(--sans);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .tp-modal-card .ghost {
+    width: 100%;
+    background: none;
+    border: 0;
+    color: var(--ink-faint);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 11px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+
+  /* 백업 / 복구 패널 */
+  .tp-bk { display: none; margin-top: 12px; }
+  .tp-bk.on { display: block; }
+  .tp-bk textarea {
+    width: 100%;
+    min-height: 96px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 10px;
+    resize: vertical;
+  }
+  .tp-bk-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tp-bk-row button {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 9px 12px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .tp-bk-row button.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tp-bk-row button.danger { color: var(--stamp); border-color: #E8C9C6; }
+  .tp-bk-note {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+  .tp-stat .hint { color: var(--ink-faint); opacity: .85; }
+
   .tp-banner {
     background: #FBF0EF;
     border: 1px solid #E8C9C6;
@@ -616,6 +723,16 @@
 <body>
 
 <div class="tp-wrap">
+  <div class="tp-modal" id="tp-modal">
+    <div class="tp-modal-card">
+      <h2 id="tp-modal-title">알림 권한이 필요합니다</h2>
+      <p id="tp-modal-body"></p>
+      <button class="prim" id="tp-modal-ok">알림 허용</button>
+      <button class="sec" id="tp-modal-settings">알림 설정 열기</button>
+      <button class="ghost" id="tp-modal-later">나중에</button>
+    </div>
+  </div>
+
   <div class="tp-banner" id="tp-banner"></div>
 
   <header>
@@ -689,7 +806,19 @@
     <button id="tp-openlist">날짜별 목록</button>
     <button id="tp-copy">오늘 목록 복사</button>
     <button id="tp-backup">백업 복사</button>
+    <button id="tp-restore">복구</button>
     <button id="tp-clear">완료함 비우기</button>
+  </div>
+
+  <div class="tp-bk" id="tp-bk">
+    <textarea id="tp-bk-text" placeholder="백업 내용을 여기에 붙여넣으세요" spellcheck="false"></textarea>
+    <div class="tp-bk-row">
+      <button class="dark" id="tp-bk-copy">복사</button>
+      <button id="tp-bk-merge">합쳐서 불러오기</button>
+      <button class="danger" id="tp-bk-replace">덮어쓰기</button>
+      <button id="tp-bk-close">닫기</button>
+    </div>
+    <p class="tp-bk-note" id="tp-bk-note"></p>
   </div>
 </div>
 
@@ -969,6 +1098,7 @@
 
     var s = '<span>이 날 <b>' + dayN + '</b></span><span>남은 일 <b>' + open.length + '</b></span>';
     if (late.length) s += '<span class="late">밀린 일 ' + late.length + '</span>';
+    if (state.tab === 'day') s += '<span class="hint">날짜 좌우 스와이프</span>';
     el('tp-stat').innerHTML = s;
 
     el('n-day').textContent = dayN || '';
@@ -1114,10 +1244,13 @@
       live = false;
       var t = e.changedTouches[0];
       var dx = t.clientX - x0, dy = t.clientY - y0;
-      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (e.cancelable) e.preventDefault();   // 스와이프가 클릭으로 이어지지 않게
+      state.swiped = true;
+      setTimeout(function () { state.swiped = false; }, 400);
       shiftDate(dx < 0 ? 1 : -1);
       render();
-    }, { passive: true });
+    }, { passive: false });
   }
 
   /* ---------- 날짜별 목록 페이지 ---------- */
@@ -1182,7 +1315,7 @@
     }).join('');
 
     el('tp-page-body').innerHTML =
-      '<div class="tp-swipe-hint">좌우로 넘기면 날짜가 바뀝니다</div>' +
+      '<div class="tp-swipe-hint">위쪽 날짜를 좌우로 넘기면 날짜가 바뀝니다</div>' +
       (list.length
         ? '<div class="tp-tbl"><div class="tp-thead"><span>순위</span><span>내용</span><span>상태</span></div>' +
           rows + '</div>'
@@ -1330,6 +1463,7 @@
   document.querySelector('.tp-wrap').addEventListener('click', function (ev) {
     var b = ev.target.closest('button');
     if (!b) return;
+    if (state.swiped) { state.swiped = false; return; }
 
     if (b.classList.contains('tp-tab')) {
       state.tab = b.dataset.tab;
@@ -1413,6 +1547,7 @@
   });
 
   el('tp-backup').addEventListener('click', function () {
+    openBackup('backup');
     copyText(JSON.stringify(state.tasks), this, '백업');
   });
 
@@ -1420,10 +1555,7 @@
     var s = notifySet();
     if (!s.daily) {
       var ok = await askPermission();
-      if (!ok) {
-        warn('알림 권한이 없습니다. 폰 설정 → 앱 → 할일관리 → 알림에서 허용한 뒤 다시 켜주세요.');
-        return;
-      }
+      if (!ok) { showPermModal('blocked'); return; }
       s.daily = true;
     } else {
       s.daily = false;
@@ -1442,13 +1574,153 @@
     if (s.daily) syncNotifications();
   });
 
+  /* ---------- 알림 권한 안내 ---------- */
+
+  var ASKED = 'dolist.permAsked';
+
+  function plug(name) {
+    return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null;
+  }
+
+  function openAppSettings() {
+    var st = plug('AppSettings');
+    if (st && st.open) { st.open(); return; }
+    warn('설정 화면을 열 수 없습니다. 폰 설정 → 앱 → 할일관리 → 알림에서 직접 허용해 주세요.');
+  }
+
+  function showPermModal(mode) {
+    var body = mode === 'blocked'
+      ? '알림이 차단되어 있어 켤 수 없습니다. 설정에서 할일관리의 알림을 허용해 주세요.'
+      : '마감 시각과 매일 아침에 알림을 보내드립니다. 알림을 허용하지 않으면 앱을 직접 열어야 할 일을 확인할 수 있습니다.';
+    el('tp-modal-body').textContent = body;
+    el('tp-modal-ok').style.display = mode === 'blocked' ? 'none' : 'block';
+    el('tp-modal').classList.add('on');
+  }
+
+  function hidePermModal() { el('tp-modal').classList.remove('on'); }
+
+  el('tp-modal-later').addEventListener('click', function () {
+    localStorage.setItem(ASKED, '1');
+    hidePermModal();
+  });
+
+  el('tp-modal-settings').addEventListener('click', function () {
+    localStorage.setItem(ASKED, '1');
+    hidePermModal();
+    openAppSettings();
+  });
+
+  el('tp-modal-ok').addEventListener('click', async function () {
+    localStorage.setItem(ASKED, '1');
+    var ok = await askPermission();
+    if (ok) {
+      var st = notifySet();
+      st.daily = true;
+      st.time = st.time || '08:30';
+      notifySave(st);
+      renderBell();
+      syncNotifications();
+      hidePermModal();
+    } else {
+      showPermModal('blocked');
+    }
+  });
+
+  function maybeAskPermission() {
+    if (!NATIVE) return;
+    if (localStorage.getItem(ASKED)) return;
+    setTimeout(function () { showPermModal('first'); }, 600);
+  }
+
+  /* ---------- 백업 / 복구 ---------- */
+
+  function openBackup(mode) {
+    el('tp-bk').classList.add('on');
+    if (mode === 'backup') {
+      el('tp-bk-text').value = JSON.stringify(state.tasks);
+      el('tp-bk-note').textContent =
+        '이 내용을 메모앱이나 메일에 보관하세요. 앱을 다시 설치한 뒤 복구에 사용합니다. 현재 ' +
+        state.tasks.length + '건.';
+    } else {
+      el('tp-bk-text').value = '';
+      el('tp-bk-note').textContent = '보관해 둔 백업 내용을 붙여넣고 불러오기를 누르세요.';
+    }
+    el('tp-bk').scrollIntoView({ block: 'nearest' });
+  }
+
+  function parseBackup() {
+    var raw = el('tp-bk-text').value.trim();
+    if (!raw) { el('tp-bk-note').textContent = '내용이 비어 있습니다.'; return null; }
+    var arr;
+    try { arr = JSON.parse(raw); } catch (e) {
+      el('tp-bk-note').textContent = '형식이 올바르지 않습니다. 백업 내용 전체를 붙여넣었는지 확인해 주세요.';
+      return null;
+    }
+    if (!Array.isArray(arr)) {
+      el('tp-bk-note').textContent = '백업 내용이 아닙니다.';
+      return null;
+    }
+    var clean = arr.filter(function (t) { return t && t.id && t.title; }).map(function (t) {
+      return {
+        id: String(t.id),
+        title: String(t.title),
+        owner: t.owner ? String(t.owner) : '',
+        prio: (t.prio === 'A' || t.prio === 'B' || t.prio === 'C') ? t.prio : 'B',
+        due: t.due || todayISO(),
+        remind: t.remind || null,
+        progress: Number(t.progress) || 0,
+        notes: Array.isArray(t.notes) ? t.notes : [],
+        done: !!t.done,
+        doneAt: t.doneAt || null,
+        nid: Number(t.nid) || 0,
+        createdAt: t.createdAt || Date.now()
+      };
+    });
+    if (!clean.length) { el('tp-bk-note').textContent = '불러올 항목이 없습니다.'; return null; }
+    return clean;
+  }
+
+  function finishRestore(msg) {
+    el('tp-bk-note').textContent = msg;
+    el('tp-bk-text').value = '';
+    state.date = todayISO();
+    state.calMonth = state.date.slice(0, 7);
+    state.tab = 'day';
+    syncTabs(); render(); save(); syncNotifications();
+  }
+
+  el('tp-restore').addEventListener('click', function () { openBackup('restore'); });
+  el('tp-bk-close').addEventListener('click', function () { el('tp-bk').classList.remove('on'); });
+  el('tp-bk-copy').addEventListener('click', function () {
+    copyText(el('tp-bk-text').value, this, '백업');
+  });
+
+  el('tp-bk-merge').addEventListener('click', function () {
+    var arr = parseBackup();
+    if (!arr) return;
+    var have = {};
+    state.tasks.forEach(function (t) { have[t.id] = true; });
+    var added = 0;
+    arr.forEach(function (t) { if (!have[t.id]) { state.tasks.push(t); added++; } });
+    finishRestore(added + '건을 추가했습니다. 중복 ' + (arr.length - added) + '건은 건너뛰었습니다.');
+  });
+
+  el('tp-bk-replace').addEventListener('click', function () {
+    var arr = parseBackup();
+    if (!arr) return;
+    var before = state.tasks.length;
+    state.tasks = arr;
+    finishRestore(arr.length + '건으로 덮어썼습니다. 기존 ' + before + '건은 대체되었습니다.');
+  });
+
   el('tp-openlist').addEventListener('click', function () {
     state.page = 'list';
     render();
   });
 
-  attachSwipe(el('tp-list'), function () { return !state.page && state.tab === 'day'; });
-  attachSwipe(el('tp-page'), function () { return state.page === 'list'; });
+  attachSwipe(document.querySelector('.tp-wrap > header'),
+    function () { return !state.page && state.tab === 'day'; });
+  attachSwipe(el('tp-page-bar'), function () { return state.page === 'list'; });
 
   async function checkOpenView() {
     if (!PREF) return;
@@ -1487,6 +1759,7 @@
   renderBell();
   mirrorWidget();
   checkOpenView();
+  maybeAskPermission();
   if (NATIVE) syncNotifications();
 })();
 </script>

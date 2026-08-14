@@ -255,6 +255,48 @@ public class DoListWidget extends AppWidgetProvider {
 }
 EOF
 
+# ---------- 알림 설정 바로가기 플러그인 ----------
+cat > "$PKG_DIR/AppSettingsPlugin.java" <<'EOF'
+package kr.dolist.planner;
+
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.Settings;
+
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+@CapacitorPlugin(name = "AppSettings")
+public class AppSettingsPlugin extends Plugin {
+
+    @PluginMethod
+    public void open(PluginCall call) {
+        String pkg = getContext().getPackageName();
+
+        try {
+            Intent i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            i.putExtra(Settings.EXTRA_APP_PACKAGE, pkg);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+            return;
+        } catch (Exception ignored) { }
+
+        try {
+            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            i.setData(Uri.parse("package:" + pkg));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("설정 화면을 열 수 없습니다");
+        }
+    }
+}
+EOF
+
 # ---------- 앱이 꺼질 때 위젯 갱신 ----------
 cat > "$PKG_DIR/MainActivity.java" <<'EOF'
 package kr.dolist.planner;
@@ -272,6 +314,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(AppSettingsPlugin.class);
         super.onCreate(savedInstanceState);
         handleOpenView(getIntent());
     }
@@ -343,4 +386,5 @@ fi
 
 echo "=== 위젯 파일 생성 완료 ==="
 ls -1 "$PKG_DIR"
+grep -c registerPlugin "$PKG_DIR/MainActivity.java"
 grep -c DoListWidget "$M"
