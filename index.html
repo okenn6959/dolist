@@ -182,6 +182,102 @@
     cursor: pointer;
   }
 
+  .tp-del-edit {
+    display: none;
+    width: 100%;
+    background: none;
+    border: 0;
+    color: var(--stamp);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px;
+    cursor: pointer;
+  }
+  .tp-del-edit.on { display: block; }
+
+  .tp-rep-box { display: none; margin-bottom: 11px; }
+  .tp-rep-box.on { display: block; }
+  .tp-inline {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    color: var(--ink);
+    flex-wrap: wrap;
+  }
+  .tp-inline input[type="number"] {
+    width: 66px;
+    font-family: var(--mono);
+    font-size: 15px;
+    text-align: center;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 4px;
+  }
+  .tp-inline select {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 6px;
+  }
+  .tp-dows { display: flex; gap: 4px; margin-top: 9px; }
+  .tp-dows label {
+    position: relative;
+    flex: 1;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .tp-dows input { position: absolute; opacity: 0; pointer-events: none; }
+  .tp-dows label.sel { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .tp-mode { display: flex; gap: 6px; margin: 10px 0; }
+  .tp-mode button {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .tp-mode button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .tp-rep-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--ink-faint);
+    margin: 4px 0 11px;
+  }
+  .tp-rep-note b { color: var(--ink-soft); font-weight: 700; }
+  .tp-routine-msg {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    background: #EDF1F5;
+    border-radius: 8px;
+    padding: 10px 11px;
+    margin-bottom: 11px;
+    display: none;
+  }
+  .tp-routine-msg.on { display: block; }
+
   .tp-tabs { display: flex; gap: 15px; border-bottom: 1px solid var(--line); margin: 20px 0 4px; }
   .tp-tab {
     background: none;
@@ -826,8 +922,68 @@
       </div>
     </div>
 
+    <div class="tp-field">
+      <span class="tp-label">반복</span>
+      <div class="tp-seg" id="tp-rep">
+        <button type="button" data-r="none" aria-pressed="true">없음</button>
+        <button type="button" data-r="day" aria-pressed="false">일</button>
+        <button type="button" data-r="week" aria-pressed="false">주</button>
+        <button type="button" data-r="month" aria-pressed="false">월</button>
+      </div>
+    </div>
+
+    <div class="tp-rep-box" id="tp-rep-day">
+      <div class="tp-inline"><input type="number" id="tp-rd-n" min="1" max="365" value="1"><span>일마다</span></div>
+    </div>
+
+    <div class="tp-rep-box" id="tp-rep-week">
+      <div class="tp-inline"><span>매</span><input type="number" id="tp-rw-n" min="1" max="52" value="1"><span>주마다</span></div>
+      <div class="tp-dows" id="tp-rw-dows">
+        <label><input type="checkbox" value="0"><span>일</span></label>
+        <label><input type="checkbox" value="1"><span>월</span></label>
+        <label><input type="checkbox" value="2"><span>화</span></label>
+        <label><input type="checkbox" value="3"><span>수</span></label>
+        <label><input type="checkbox" value="4"><span>목</span></label>
+        <label><input type="checkbox" value="5"><span>금</span></label>
+        <label><input type="checkbox" value="6"><span>토</span></label>
+      </div>
+    </div>
+
+    <div class="tp-rep-box" id="tp-rep-month">
+      <div class="tp-inline"><span>매</span><input type="number" id="tp-rm-n" min="1" max="24" value="1"><span>개월마다</span></div>
+      <div class="tp-mode" id="tp-rm-mode">
+        <button type="button" data-m="date" aria-pressed="true">날짜로</button>
+        <button type="button" data-m="nth" aria-pressed="false">요일로</button>
+      </div>
+      <div class="tp-inline" id="tp-rm-date">
+        <input type="number" id="tp-rm-day" min="1" max="31" value="1"><span>일에</span>
+      </div>
+      <div class="tp-inline" id="tp-rm-nth" style="display:none">
+        <select id="tp-rm-nthidx">
+          <option value="1">첫째</option>
+          <option value="2">둘째</option>
+          <option value="3">셋째</option>
+          <option value="4">넷째</option>
+          <option value="5">마지막</option>
+        </select>
+        <select id="tp-rm-nthwd">
+          <option value="0">일요일</option>
+          <option value="1">월요일</option>
+          <option value="2">화요일</option>
+          <option value="3">수요일</option>
+          <option value="4">목요일</option>
+          <option value="5">금요일</option>
+          <option value="6">토요일</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="tp-rep-note" id="tp-rep-note"></p>
+    <div class="tp-routine-msg" id="tp-routine-msg"></div>
+
     <button class="tp-submit" id="tp-save">목록에 넣기</button>
     <button class="tp-cancel" id="tp-cancel">닫기</button>
+    <button class="tp-del-edit" id="tp-del">이 할 일 삭제</button>
   </div>
 
   <div class="tp-bell is-off" id="tp-bell">
@@ -917,6 +1073,165 @@
     if (t.done || !t.due) return 0;
     var d = dayDiff(t.due);
     return d > 0 ? d : 0;
+  }
+
+  /* ================= 반복(루틴) 엔진 ================= */
+
+  var RKEY = 'dolist.rules.v1';
+  var HORIZON = 60;          // 며칠 앞까지 미리 만들어 둘지
+  var GEN_CAP = 120;         // 한 번에 만들 최대 개수
+  var rules = [];
+  var DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+  function isoToDate(iso) { return new Date(iso + 'T00:00:00'); }
+  function dateToISO(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+  function addDaysISO(iso, n) { var d = isoToDate(iso); d.setDate(d.getDate() + n); return dateToISO(d); }
+  function daysBetween(a, b) { return Math.round((isoToDate(b) - isoToDate(a)) / 86400000); }
+  function lastDayOfMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+
+  function nthWeekdayISO(y, m, nth, wd) {
+    var last = lastDayOfMonth(y, m), day;
+    if (nth >= 5) {
+      for (day = last; day >= 1; day--) if (new Date(y, m, day).getDay() === wd) return dateToISO(new Date(y, m, day));
+      return null;
+    }
+    var first = new Date(y, m, 1).getDay();
+    day = 1 + ((wd - first + 7) % 7) + (nth - 1) * 7;
+    return day > last ? null : dateToISO(new Date(y, m, day));
+  }
+
+  function occurrences(r, fromISO, toISO, cap) {
+    var out = [], guard = 0;
+    cap = cap || GEN_CAP;
+    if (!r || !r.start || fromISO > toISO) return out;
+
+    if (r.freq === 'day') {
+      var n = Math.max(1, Number(r.n) || 1);
+      var cur = r.start, gap = daysBetween(r.start, fromISO);
+      if (gap > 0) cur = addDaysISO(r.start, Math.ceil(gap / n) * n);
+      while (cur <= toISO && out.length < cap && guard++ < 3000) {
+        if (cur >= fromISO) out.push(cur);
+        cur = addDaysISO(cur, n);
+      }
+
+    } else if (r.freq === 'week') {
+      var nw = Math.max(1, Number(r.n) || 1);
+      var wds = (r.weekdays && r.weekdays.length) ? r.weekdays.slice() : [isoToDate(r.start).getDay()];
+      var weekStart = addDaysISO(r.start, -isoToDate(r.start).getDay());
+      var w = weekStart, wGap = Math.floor(daysBetween(weekStart, fromISO) / 7);
+      if (wGap > 0) w = addDaysISO(weekStart, Math.floor(wGap / nw) * nw * 7);
+      while (w <= toISO && out.length < cap && guard++ < 3000) {
+        for (var i = 0; i < 7; i++) {
+          if (wds.indexOf(i) < 0) continue;
+          var dt = addDaysISO(w, i);
+          if (dt >= fromISO && dt >= r.start && dt <= toISO) out.push(dt);
+        }
+        w = addDaysISO(w, nw * 7);
+      }
+      out.sort();
+
+    } else if (r.freq === 'month') {
+      var nm = Math.max(1, Number(r.n) || 1);
+      var sd = isoToDate(r.start), y = sd.getFullYear(), m = sd.getMonth();
+      while (guard++ < 800 && out.length < cap) {
+        var iso = r.monthMode === 'nth'
+          ? nthWeekdayISO(y, m, Number(r.nth) || 1, Number(r.nwd) || 0)
+          : dateToISO(new Date(y, m, Math.min(Number(r.monthDay) || sd.getDate(), lastDayOfMonth(y, m))));
+        if (iso) {
+          if (iso > toISO) break;
+          if (iso >= fromISO && iso >= r.start) out.push(iso);
+        }
+        m += nm;
+        while (m > 11) { m -= 12; y++; }
+      }
+    }
+    return out;
+  }
+
+  function ruleText(r) {
+    if (!r || r.freq === 'none') return '';
+    var n = Math.max(1, Number(r.n) || 1);
+    if (r.freq === 'day') return n === 1 ? '매일' : n + '일마다';
+    if (r.freq === 'week') {
+      var wd = (r.weekdays || []).slice().sort().map(function (i) { return DOW[i]; }).join('·');
+      return (n === 1 ? '매주' : n + '주마다') + (wd ? ' ' + wd : '');
+    }
+    var per = n === 1 ? '매월' : n + '개월마다';
+    if (r.monthMode === 'nth') {
+      var idx = ['', '첫째', '둘째', '셋째', '넷째', '마지막'][Math.min(5, Number(r.nth) || 1)];
+      return per + ' ' + idx + ' ' + DOW[Number(r.nwd) || 0] + '요일';
+    }
+    return per + ' ' + (Number(r.monthDay) || 1) + '일';
+  }
+
+  function loadRules() {
+    try {
+      var v = JSON.parse(localStorage.getItem(RKEY));
+      rules = Array.isArray(v) ? v : [];
+    } catch (e) { rules = []; }
+  }
+
+  function saveRules() {
+    try { localStorage.setItem(RKEY, JSON.stringify(rules)); } catch (e) {}
+  }
+
+  function findRule(id) {
+    for (var i = 0; i < rules.length; i++) if (rules[i].id === id) return rules[i];
+    return null;
+  }
+
+  function nextNid() {
+    var n = Number(localStorage.getItem('dolist.nid') || '1');
+    localStorage.setItem('dolist.nid', String(n + 1));
+    return n;
+  }
+
+  /** 규칙에 따라 앞으로의 항목을 실제로 만들어 둔다 */
+  function syncRules() {
+    var today = todayISO(), to = addDaysISO(today, HORIZON), made = 0;
+
+    rules.forEach(function (r) {
+      if (!r.active) return;
+      var from = r.lastGen ? addDaysISO(r.lastGen, 1) : r.start;
+      if (from > to) return;
+
+      var dates = occurrences(r, from, to);
+      var seen = {};
+      state.tasks.forEach(function (t) { if (t.rid === r.id) seen[t.on] = true; });
+
+      dates.forEach(function (d) {
+        if (seen[d]) return;
+        state.tasks.push({
+          id: 't' + Date.now() + Math.floor(Math.random() * 900 + 100) + made,
+          title: r.title, owner: r.owner || '', prio: r.prio || 'B',
+          on: d, due: d, remind: r.remind || null,
+          rid: r.id, progress: 0, notes: [], done: false, createdAt: Date.now(),
+          nid: nextNid()
+        });
+        made++;
+      });
+
+      r.lastGen = to;
+    });
+
+    if (made) { saveRules(); save(); }
+    else saveRules();
+    return made;
+  }
+
+  /** 규칙 중단: 앞으로의 미완료 항목을 걷어낸다 */
+  function stopRule(rid) {
+    var r = findRule(rid);
+    if (r) { r.active = false; saveRules(); }
+    var today = todayISO(), removed = 0;
+    state.tasks = state.tasks.filter(function (t) {
+      if (t.rid === rid && !t.done && t.on > today) { removed++; return false; }
+      return true;
+    });
+    return removed;
   }
 
   function relLabel(iso) {
@@ -1030,7 +1345,11 @@
       }
 
       var assigned = false;
+      var limitISO = addDaysISO(todayISO(), 45), scheduled = 0;
       state.tasks.forEach(function (t) {
+        if (scheduled >= 60) return;
+        if (t.due && t.due > limitISO) return;
+        scheduled++;
         if (t.done || !t.remind || !t.due) return;
         var at = new Date(t.due + 'T' + t.remind + ':00');
         if (isNaN(at.getTime()) || at.getTime() <= Date.now() + 10000) return;
@@ -1217,6 +1536,7 @@
     if (t.owner) meta.push('<span>' + esc(t.owner) + '</span>');
     meta.push('<span>' + esc(fmtDue(t.on)) + '</span>');
     if (late) meta.push('<span class="late">' + lateDays(t) + '일 지연</span>');
+    if (t.rid) meta.push('<span>\u21BB 반복</span>');
     if (t.done && t.doneAt) meta.push('<span>' + hhmm(t.doneAt) + ' 완료</span>');
     if (!t.done) meta.push('<span>' + (t.progress || 0) + '%</span>');
     if (!t.done && t.remind) {
@@ -1380,6 +1700,7 @@
         meta.push('\u23F0 ' + ((!t.due || t.due === t.on) ? '' : fmtDue(t.due) + ' ') + esc(t.remind));
       }
       if (t.on && t.on !== iso) meta.push('표시 ' + esc(fmtDue(t.on)));
+      if (t.rid) meta.push('\u21BB 반복');
       return '<button class="tp-tr' + (t.done ? ' is-done' : '') + '" data-prio="' + esc(t.prio) +
         '" data-act="edit" data-id="' + t.id + '">' +
         '<span class="pr">' + (t.done ? '\u2713' : esc(t.prio)) + '</span>' +
@@ -1442,6 +1763,32 @@
         state.date = t.on;
         state.calMonth = state.date.slice(0, 7);
         state.tab = 'day';
+
+        var nr = formRule();
+        var cur = t.rid ? findRule(t.rid) : null;
+        if (!nr && cur && cur.active) {
+          var gone = stopRule(cur.id);
+          info('반복을 중단했습니다' + (gone ? ' · 예정 ' + gone + '건 정리' : ''));
+        } else if (nr) {
+          if (cur) {
+            var today0 = todayISO();
+            state.tasks = state.tasks.filter(function (x) {
+              return !(x.rid === cur.id && !x.done && x.on > today0);
+            });
+            nr.id = cur.id;
+            nr.title = title; nr.owner = owner; nr.prio = state.prio;
+            nr.remind = t.remind; nr.lastGen = null;
+            rules[rules.indexOf(cur)] = nr;
+          } else {
+            nr.id = 'r' + Date.now() + Math.floor(Math.random() * 900 + 100);
+            nr.title = title; nr.owner = owner; nr.prio = state.prio; nr.remind = t.remind;
+            rules.push(nr);
+            t.rid = nr.id;
+          }
+          saveRules();
+          var m = syncRules();
+          info(ruleText(nr) + ' 반복 설정 · 예정 ' + m + '건 생성');
+        }
       }
       closeForm();
       syncTabs(); render(); save(); syncNotifications();
@@ -1461,12 +1808,145 @@
       })(),
       progress: 0, notes: [], done: false, createdAt: Date.now()
     });
+    var newTask = state.tasks[state.tasks.length - 1];
+    var rule = formRule();
+    if (rule) {
+      rule.id = 'r' + Date.now() + Math.floor(Math.random() * 900 + 100);
+      rule.title = newTask.title;
+      rule.owner = newTask.owner;
+      rule.prio = newTask.prio;
+      rule.remind = newTask.remind;
+      rule.lastGen = newTask.on;
+      rules.push(rule);
+      newTask.rid = rule.id;
+      saveRules();
+      var made = syncRules();
+      info(ruleText(rule) + ' 반복 설정 · 예정 ' + made + '건 생성');
+    }
+
     el('tp-title').value = '';
-    state.date = state.tasks[state.tasks.length - 1].on;
+    state.date = newTask.on;
     state.calMonth = state.date.slice(0, 7);
     state.tab = 'day';
     closeForm();
     syncTabs(); render(); save(); syncNotifications();
+  }
+
+  /* ---------- 반복 설정 폼 ---------- */
+
+  function repMode() {
+    var b = document.querySelector('#tp-rep button[aria-pressed="true"]');
+    return b ? b.dataset.r : 'none';
+  }
+
+  function monthMode() {
+    var b = document.querySelector('#tp-rm-mode button[aria-pressed="true"]');
+    return b ? b.dataset.m : 'date';
+  }
+
+  function repWeekdays() {
+    return [].slice.call(document.querySelectorAll('#tp-rw-dows input:checked'))
+      .map(function (x) { return Number(x.value); });
+  }
+
+  function setRepMode(mode) {
+    document.querySelectorAll('#tp-rep button').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.r === mode ? 'true' : 'false');
+    });
+    ['day', 'week', 'month'].forEach(function (k) {
+      el('tp-rep-' + k).className = 'tp-rep-box' + (mode === k ? ' on' : '');
+    });
+    repPreview();
+  }
+
+  function setMonthMode(mode) {
+    document.querySelectorAll('#tp-rm-mode button').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.m === mode ? 'true' : 'false');
+    });
+    el('tp-rm-date').style.display = mode === 'date' ? '' : 'none';
+    el('tp-rm-nth').style.display = mode === 'nth' ? '' : 'none';
+    repPreview();
+  }
+
+  function syncDowLabels() {
+    document.querySelectorAll('#tp-rw-dows label').forEach(function (l) {
+      var i = l.querySelector('input');
+      if (i.checked) l.classList.add('sel'); else l.classList.remove('sel');
+    });
+  }
+
+  /** 폼 입력을 규칙 객체로 */
+  function formRule() {
+    var mode = repMode();
+    if (mode === 'none') return null;
+    var start = el('tp-on').value || state.date;
+    var r = { freq: mode, start: start, active: true };
+    if (mode === 'day') r.n = Math.max(1, Number(el('tp-rd-n').value) || 1);
+    else if (mode === 'week') {
+      r.n = Math.max(1, Number(el('tp-rw-n').value) || 1);
+      var wd = repWeekdays();
+      r.weekdays = wd.length ? wd : [isoToDate(start).getDay()];
+    } else {
+      r.n = Math.max(1, Number(el('tp-rm-n').value) || 1);
+      r.monthMode = monthMode();
+      if (r.monthMode === 'nth') {
+        r.nth = Number(el('tp-rm-nthidx').value) || 1;
+        r.nwd = Number(el('tp-rm-nthwd').value) || 0;
+      } else {
+        r.monthDay = Math.min(31, Math.max(1, Number(el('tp-rm-day').value) || 1));
+      }
+    }
+    return r;
+  }
+
+  function repPreview() {
+    var r = formRule();
+    if (!r) { el('tp-rep-note').innerHTML = ''; return; }
+    var from = r.start;
+    var next = occurrences(r, from, addDaysISO(from, 400), 4);
+    var txt = next.length
+      ? next.map(function (d) {
+          var dd = isoToDate(d);
+          return (dd.getMonth() + 1) + '/' + dd.getDate() + '(' + DOW[dd.getDay()] + ')';
+        }).join(' · ')
+      : '조건에 맞는 날짜가 없습니다';
+    el('tp-rep-note').innerHTML = '<b>' + esc(ruleText(r)) + '</b> · ' + esc(txt) + ' …';
+  }
+
+  /** 규칙을 폼에 채우기 */
+  function fillRepForm(r) {
+    var wds = document.querySelectorAll('#tp-rw-dows input');
+    wds.forEach(function (x) { x.checked = false; });
+
+    if (!r) {
+      el('tp-rd-n').value = 1;
+      el('tp-rw-n').value = 1;
+      el('tp-rm-n').value = 1;
+      el('tp-rm-day').value = isoToDate(el('tp-on').value || state.date).getDate();
+      el('tp-rm-nthidx').value = '1';
+      el('tp-rm-nthwd').value = String(isoToDate(el('tp-on').value || state.date).getDay());
+      setMonthMode('date');
+      setRepMode('none');
+      syncDowLabels();
+      return;
+    }
+    if (r.freq === 'day') el('tp-rd-n').value = r.n || 1;
+    if (r.freq === 'week') {
+      el('tp-rw-n').value = r.n || 1;
+      (r.weekdays || []).forEach(function (i) {
+        var box = document.querySelector('#tp-rw-dows input[value="' + i + '"]');
+        if (box) box.checked = true;
+      });
+    }
+    if (r.freq === 'month') {
+      el('tp-rm-n').value = r.n || 1;
+      el('tp-rm-day').value = r.monthDay || 1;
+      el('tp-rm-nthidx').value = String(r.nth || 1);
+      el('tp-rm-nthwd').value = String(r.nwd || 0);
+      setMonthMode(r.monthMode === 'nth' ? 'nth' : 'date');
+    }
+    setRepMode(r.freq);
+    syncDowLabels();
   }
 
   function syncPrio() {
@@ -1491,6 +1971,15 @@
       state.prio = t.prio;
       el('tp-save').textContent = '수정 저장';
       el('tp-cancel').textContent = '수정 취소';
+      el('tp-del').className = 'tp-del-edit on';
+      var rr = t.rid ? findRule(t.rid) : null;
+      fillRepForm(rr && rr.active ? rr : null);
+      el('tp-routine-msg').className = 'tp-routine-msg' + (rr ? ' on' : '');
+      if (rr) {
+        el('tp-routine-msg').textContent = rr.active
+          ? '반복 항목입니다(' + ruleText(rr) + '). 제목·담당·우선순위 수정은 이 항목에만 적용되고, 반복 설정을 바꾸면 앞으로 만들어질 항목에 적용됩니다. 반복을 없음으로 바꾸면 아직 지나지 않은 항목이 정리됩니다.'
+          : '반복이 중단된 항목입니다. 다시 설정하면 앞으로의 항목이 만들어집니다.';
+      }
     } else {
       el('tp-title').value = '';
       el('tp-on').value = state.date;
@@ -1498,6 +1987,9 @@
       el('tp-remind').value = '08:00';
       el('tp-save').textContent = '목록에 넣기';
       el('tp-cancel').textContent = '닫기';
+      el('tp-del').className = 'tp-del-edit';
+      el('tp-routine-msg').className = 'tp-routine-msg';
+      fillRepForm(null);
     }
     syncPrio();
     el('tp-title').focus();
@@ -1600,6 +2092,32 @@
   el('tp-open').addEventListener('click', function () { openForm(null); });
   el('tp-cancel').addEventListener('click', closeForm);
   el('tp-save').addEventListener('click', add);
+
+  el('tp-del').addEventListener('click', function () {
+    var t = state.editId ? find(state.editId) : null;
+    if (!t) { closeForm(); render(); return; }
+    state.tasks = state.tasks.filter(function (x) { return x.id !== t.id; });
+    closeForm();
+    syncTabs(); render(); save(); syncNotifications();
+    info('삭제했습니다');
+  });
+
+  el('tp-rep').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b && b.dataset.r) setRepMode(b.dataset.r);
+  });
+
+  el('tp-rm-mode').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b && b.dataset.m) setMonthMode(b.dataset.m);
+  });
+
+  el('tp-rw-dows').addEventListener('change', function () { syncDowLabels(); repPreview(); });
+
+  ['tp-rd-n', 'tp-rw-n', 'tp-rm-n', 'tp-rm-day', 'tp-rm-nthidx', 'tp-rm-nthwd', 'tp-on']
+    .forEach(function (id) {
+      el(id).addEventListener('change', repPreview);
+    });
 
   document.querySelector('.tp-wrap').addEventListener('keydown', function (e) {
     if (e.key !== 'Enter') return;
@@ -1823,6 +2341,7 @@
         title: String(t.title),
         owner: t.owner ? String(t.owner) : '',
         prio: (t.prio === 'A' || t.prio === 'B' || t.prio === 'C') ? t.prio : 'B',
+        rid: t.rid || null,
         on: t.on || t.due || todayISO(),
         due: t.due || t.on || todayISO(),
         remind: t.remind || null,
@@ -1942,6 +2461,8 @@
   state.date = todayISO();
   state.calMonth = state.date.slice(0, 7);
   load();
+  loadRules();
+  syncRules();
   render();
   renderBell();
   mirrorWidget();
