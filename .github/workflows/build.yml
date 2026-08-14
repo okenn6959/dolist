@@ -53,6 +53,24 @@ jobs:
           done
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
+      - name: 서명키 고정
+        run: |
+          if [ -f debug.keystore ]; then
+            mkdir -p ~/.android
+            cp debug.keystore ~/.android/debug.keystore
+            echo "고정 서명키 적용됨"
+          else
+            echo "::error::debug.keystore 파일이 저장소에 없습니다. 업데이트 설치가 실패합니다."
+            exit 1
+          fi
+
+      - name: 버전 번호 올리기
+        run: |
+          G=android/app/build.gradle
+          sed -i "s/versionCode .*/versionCode ${{ github.run_number }}/" $G
+          sed -i "s/versionName .*/versionName \"1.0.${{ github.run_number }}\"/" $G
+          grep -E "versionCode|versionName" $G
+
       - name: APK 빌드
         run: |
           cd android
