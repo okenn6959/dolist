@@ -141,7 +141,7 @@ EOF
 
 band a "오늘"
 for i in a1 a2 a3 a4; do row $i; done
-band b "예정"
+band b "차주 예정"
 for i in b1 b2 b3 b4; do row $i; done
 
 echo ""
@@ -239,10 +239,18 @@ public class DoListWidget extends AppWidgetProvider {
             v.setTextViewText(R.id.w_sub, "목록을 읽지 못했습니다");
         }
 
-        v.setViewVisibility(R.id.w_band_a, a == 0 ? View.GONE : View.VISIBLE);
+        // 오늘 업무가 없어도 표의 한 칸은 빈칸으로 남긴다
+        if (a == 0) {
+            v.setTextViewText(PRIO_A[0], "");
+            v.setTextViewText(TITLE_A[0], " ");
+            v.setTextViewText(DATE_A[0], "");
+            v.setViewVisibility(ROW_A[0], View.VISIBLE);
+        }
+
+        v.setViewVisibility(R.id.w_thead, View.VISIBLE);
+        v.setViewVisibility(R.id.w_band_a, View.VISIBLE);
         v.setViewVisibility(R.id.w_band_b, b == 0 ? View.GONE : View.VISIBLE);
-        v.setViewVisibility(R.id.w_thead, (a + b) == 0 ? View.GONE : View.VISIBLE);
-        v.setViewVisibility(R.id.w_empty, (a + b) == 0 ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.w_empty, View.GONE);
 
         Intent open = new Intent(ctx, MainActivity.class);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);

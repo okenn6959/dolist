@@ -1414,7 +1414,9 @@
     });
 
     var nextList = open.filter(function (t) {
-      return t.on && dayDiff(t.on) < 0;
+      if (!t.on) return false;
+      var ahead = -dayDiff(t.on);
+      return ahead >= 1 && ahead <= 7;
     }).sort(function (a, b) {
       return (a.on || '').localeCompare(b.on || '') || byPrio(a, b);
     });
@@ -1428,7 +1430,7 @@
 
     var payload = {
       head: (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + days[d.getDay()] + '요일',
-      sub: '오늘 ' + todayList.length + '건 · 예정 ' + nextList.length + '건' +
+      sub: '오늘 ' + todayList.length + '건 · 차주 ' + nextList.length + '건' +
         (late ? ' · 지연 ' + late : ''),
       today: todayList.slice(0, 4).map(function (t) {
         return {
