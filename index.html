@@ -280,6 +280,51 @@
     cursor: pointer;
   }
 
+  .tp-bell {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 12px;
+    padding: 11px 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .tp-bell-txt { flex: 1; font-size: 13.5px; font-weight: 600; min-width: 0; }
+  .tp-bell-txt em {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-style: normal;
+    font-weight: 500;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+  .tp-bell input[type="time"] {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 8px;
+  }
+  .tp-bell button {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--ink);
+    color: #fff;
+    border: 0;
+    border-radius: 7px;
+    padding: 9px 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tp-bell.is-on button { background: var(--card); color: var(--done); border: 1px solid #BFD8D2; }
+  .tp-bell.is-off button[disabled] { background: var(--line); color: var(--ink-faint); }
+
   .tp-banner {
     background: #FBF0EF;
     border: 1px solid #E8C9C6;
@@ -336,8 +381,19 @@
       </div>
     </div>
 
+    <div class="tp-field">
+      <label class="tp-label" for="tp-remind">알림 시각 · 비우면 알림 없음</label>
+      <input type="time" id="tp-remind">
+    </div>
+
     <button class="tp-submit" id="tp-save">목록에 넣기</button>
     <button class="tp-cancel" id="tp-cancel">닫기</button>
+  </div>
+
+  <div class="tp-bell is-off" id="tp-bell">
+    <div class="tp-bell-txt">매일 알림<em id="tp-bell-state">꺼짐</em></div>
+    <input type="time" id="tp-bell-time" value="08:30" aria-label="매일 알림 시각">
+    <button id="tp-bell-toggle">켜기</button>
   </div>
 
   <nav class="tp-tabs" role="tablist">
@@ -418,6 +474,111 @@
     }
   }
 
+  /* ---------- 로컬 알림 ---------- */
+
+  var CAP = window.Capacitor || null;
+  var LN = (CAP && CAP.Plugins && CAP.Plugins.LocalNotifications) || null;
+  var NATIVE = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform() && LN);
+  var SET = 'dolist.notify.v1';
+  var DAILY_ID = 9001;
+
+  function notifySet() {
+    try {
+      var s = JSON.parse(localStorage.getItem(SET));
+      if (s && typeof s === 'object') return { daily: !!s.daily, time: s.time || '08:30' };
+    } catch (e) {}
+    return { daily: false, time: '08:30' };
+  }
+
+  function notifySave(s) {
+    try { localStorage.setItem(SET, JSON.stringify(s)); } catch (e) {}
+  }
+
+  function nidFor(t) {
+    if (!t.nid) {
+      var n = Number(localStorage.getItem('dolist.nid') || '1');
+      t.nid = n;
+      localStorage.setItem('dolist.nid', String(n + 1));
+    }
+    return t.nid;
+  }
+
+  async function askPermission() {
+    if (!NATIVE) return false;
+    try {
+      var r = await LN.checkPermissions();
+      if (r.display !== 'granted') r = await LN.requestPermissions();
+      return r.display === 'granted';
+    } catch (e) { return false; }
+  }
+
+  async function syncNotifications() {
+    if (!NATIVE) return;
+    try {
+      var pending = await LN.getPending();
+      var old = (pending.notifications || []).map(function (n) { return { id: n.id }; });
+      if (old.length) await LN.cancel({ notifications: old });
+
+      var list = [];
+      var s = notifySet();
+
+      if (s.daily) {
+        var hm = (s.time || '08:30').split(':');
+        list.push({
+          id: DAILY_ID,
+          title: '할일관리',
+          body: '오늘 목록을 확인하세요',
+          schedule: { on: { hour: Number(hm[0]), minute: Number(hm[1]) }, allowWhileIdle: true }
+        });
+      }
+
+      var assigned = false;
+      state.tasks.forEach(function (t) {
+        if (t.done || !t.remind || !t.due) return;
+        var at = new Date(t.due + 'T' + t.remind + ':00');
+        if (isNaN(at.getTime()) || at.getTime() <= Date.now() + 10000) return;
+        if (!t.nid) assigned = true;
+        list.push({
+          id: nidFor(t),
+          title: '[' + t.prio + '] ' + t.title,
+          body: (t.owner ? t.owner + ' · ' : '') + '마감 ' + fmtDue(t.due),
+          schedule: { at: at, allowWhileIdle: true }
+        });
+      });
+
+      if (assigned) save();
+      if (list.length) await LN.schedule({ notifications: list });
+      clearWarn();
+    } catch (e) {
+      warn('알림을 예약하지 못했습니다. 폰 설정에서 할일관리의 알림 권한을 확인해 주세요.');
+    }
+  }
+
+  function renderBell() {
+    var s = notifySet();
+    var wrap = el('tp-bell');
+    var btn = el('tp-bell-toggle');
+    el('tp-bell-time').value = s.time;
+
+    if (!NATIVE) {
+      wrap.className = 'tp-bell is-off';
+      el('tp-bell-state').textContent = '설치한 앱에서만 동작';
+      btn.textContent = '켜기';
+      btn.disabled = true;
+      return;
+    }
+    btn.disabled = false;
+    if (s.daily) {
+      wrap.className = 'tp-bell is-on';
+      el('tp-bell-state').textContent = s.time + ' 알림 켜짐';
+      btn.textContent = '끄기';
+    } else {
+      wrap.className = 'tp-bell is-off';
+      el('tp-bell-state').textContent = '꺼짐';
+      btn.textContent = '켜기';
+    }
+  }
+
   function header() {
     var d = new Date();
     var days = ['일', '월', '화', '수', '목', '금', '토'];
@@ -470,6 +631,7 @@
     if (late) meta.push('<span class="late">' + dayDiff(t.due) + '일 밀림</span>');
     if (t.done && t.doneAt) meta.push('<span>' + hhmm(t.doneAt) + ' 완료</span>');
     if (!t.done) meta.push('<span>' + (t.progress || 0) + '%</span>');
+    if (!t.done && t.remind) meta.push('<span>\u23F0 ' + esc(t.remind) + '</span>');
 
     var notes = '';
     if (t.notes && t.notes.length) {
@@ -524,12 +686,18 @@
       id: 't' + Date.now() + Math.floor(Math.random() * 900 + 100),
       title: title, owner: owner, prio: state.prio,
       due: el('tp-due').value || todayISO(),
+      remind: el('tp-remind').value || null,
+      nid: (function () {
+        var n = Number(localStorage.getItem('dolist.nid') || '1');
+        localStorage.setItem('dolist.nid', String(n + 1));
+        return n;
+      })(),
       progress: 0, notes: [], done: false, createdAt: Date.now()
     });
     if (owner) localStorage.setItem(OWNER, owner);
     el('tp-title').value = '';
     state.tab = 'today';
-    syncTabs(); render(); save();
+    syncTabs(); render(); save(); syncNotifications();
   }
 
   function syncTabs() {
@@ -592,6 +760,7 @@
     else return;
 
     render(); save();
+    if (act === 'done' || act === 'undo' || act === 'del') syncNotifications();
   });
 
   el('tp-open').addEventListener('click', function () {
@@ -618,7 +787,7 @@
   el('tp-clear').addEventListener('click', function () {
     if (!state.tasks.some(function (t) { return t.done; })) { warn('완료함이 이미 비어 있습니다.'); return; }
     state.tasks = state.tasks.filter(function (t) { return !t.done; });
-    render(); save();
+    render(); save(); syncNotifications();
   });
 
   el('tp-copy').addEventListener('click', function () {
@@ -634,8 +803,36 @@
     copyText(JSON.stringify(state.tasks), this, '백업');
   });
 
+  el('tp-bell-toggle').addEventListener('click', async function () {
+    var s = notifySet();
+    if (!s.daily) {
+      var ok = await askPermission();
+      if (!ok) {
+        warn('알림 권한이 없습니다. 폰 설정 → 앱 → 할일관리 → 알림에서 허용한 뒤 다시 켜주세요.');
+        return;
+      }
+      s.daily = true;
+    } else {
+      s.daily = false;
+    }
+    s.time = el('tp-bell-time').value || '08:30';
+    notifySave(s);
+    renderBell();
+    syncNotifications();
+  });
+
+  el('tp-bell-time').addEventListener('change', function () {
+    var s = notifySet();
+    s.time = this.value || '08:30';
+    notifySave(s);
+    renderBell();
+    if (s.daily) syncNotifications();
+  });
+
   load();
   render();
+  renderBell();
+  if (NATIVE) syncNotifications();
 })();
 </script>
 </body>
