@@ -1,0 +1,8 @@
+{
+  "appId": "kr.dolist.planner",
+  "appName": "할일관리",
+  "webDir": "www",
+  "android": {
+    "webContentsDebuggingEnabled": false
+  }
+}
