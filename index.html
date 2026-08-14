@@ -669,6 +669,42 @@
   /* 백업 / 복구 패널 */
   .tp-bk { display: none; margin-top: 12px; }
   .tp-bk.on { display: block; }
+  .tp-bk-file {
+    display: block;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 13.5px;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px dashed var(--line);
+    border-radius: 9px;
+    padding: 12px 10px;
+    margin-bottom: 8px;
+  }
+  .tp-bk-file::file-selector-button {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--ink);
+    color: #fff;
+    border: 0;
+    border-radius: 7px;
+    padding: 9px 12px;
+    margin-right: 10px;
+  }
+  .tp-bk-res {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 11px;
+    margin-bottom: 8px;
+    word-break: break-all;
+  }
+  .tp-bk-res b { color: var(--done); }
   .tp-bk textarea {
     width: 100%;
     min-height: 96px;
@@ -811,11 +847,14 @@
   </div>
 
   <div class="tp-bk" id="tp-bk">
-    <textarea id="tp-bk-text" placeholder="백업 내용을 여기에 붙여넣으세요" spellcheck="false"></textarea>
+    <div class="tp-bk-res" id="tp-bk-res" style="display:none"></div>
+    <input type="file" class="tp-bk-file" id="tp-bk-input" accept=".json,application/json" style="display:none">
+    <textarea id="tp-bk-text" placeholder="백업 내용" spellcheck="false"></textarea>
     <div class="tp-bk-row">
+      <button class="dark" id="tp-bk-share" style="display:none">파일 보내기</button>
       <button class="dark" id="tp-bk-copy">복사</button>
-      <button id="tp-bk-merge">합쳐서 불러오기</button>
-      <button class="danger" id="tp-bk-replace">덮어쓰기</button>
+      <button id="tp-bk-merge" style="display:none">합쳐서 불러오기</button>
+      <button class="danger" id="tp-bk-replace" style="display:none">덮어쓰기</button>
       <button id="tp-bk-close">닫기</button>
     </div>
     <p class="tp-bk-note" id="tp-bk-note"></p>
@@ -1546,10 +1585,7 @@
     copyText('오늘 할 일\n' + (lines.length ? lines.join('\n') : '없음'), this, '목록');
   });
 
-  el('tp-backup').addEventListener('click', function () {
-    openBackup('backup');
-    copyText(JSON.stringify(state.tasks), this, '백업');
-  });
+  el('tp-backup').addEventListener('click', function () { openBackup('backup'); });
 
   el('tp-bell-toggle').addEventListener('click', async function () {
     var s = notifySet();
@@ -1634,16 +1670,77 @@
 
   /* ---------- 백업 / 복구 ---------- */
 
-  function openBackup(mode) {
+  var lastBackupUri = null;
+
+  function bkShow(ids, on) {
+    ids.forEach(function (id) { el(id).style.display = on ? '' : 'none'; });
+  }
+
+  function stamp() {
+    var d = new Date(), z = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + '-' + z(d.getHours()) + z(d.getMinutes());
+  }
+
+  async function saveBackupFile() {
+    var name = 'dolist-backup-' + stamp() + '.json';
+    var json = JSON.stringify(state.tasks);
+    var FS = plug('Filesystem');
+    lastBackupUri = null;
+
+    if (FS && FS.writeFile) {
+      var dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
+      for (var i = 0; i < dirs.length; i++) {
+        try {
+          var r = await FS.writeFile({ path: name, data: json, directory: dirs[i], encoding: 'utf8', recursive: true });
+          lastBackupUri = (r && r.uri) || null;
+          var where = dirs[i] === 'DOCUMENTS' ? 'Documents 폴더'
+            : dirs[i] === 'EXTERNAL' ? '앱 전용 저장 공간' : '임시 저장 공간';
+          el('tp-bk-res').innerHTML = '<b>파일로 저장했습니다</b><br>' + esc(name) +
+            '<br>' + where + ' · ' + state.tasks.length + '건' +
+            (dirs[i] === 'CACHE' ? '<br>임시 공간이라 지워질 수 있습니다. 아래 파일 보내기로 옮겨두세요.' : '');
+          return true;
+        } catch (e) { }
+      }
+      el('tp-bk-res').innerHTML = '파일로 저장하지 못했습니다. 아래 내용을 복사해 보관해 주세요.';
+      return false;
+    }
+
+    // 앱이 아닌 브라우저에서 열었을 때
+    try {
+      var blob = new Blob([json], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      el('tp-bk-res').innerHTML = '<b>' + esc(name) + '</b><br>다운로드로 저장했습니다 · ' +
+        state.tasks.length + '건';
+      return true;
+    } catch (e) {
+      el('tp-bk-res').innerHTML = '파일로 저장하지 못했습니다. 아래 내용을 복사해 보관해 주세요.';
+      return false;
+    }
+  }
+
+  async function openBackup(mode) {
     el('tp-bk').classList.add('on');
+    el('tp-bk-input').value = '';
+
     if (mode === 'backup') {
       el('tp-bk-text').value = JSON.stringify(state.tasks);
+      bkShow(['tp-bk-res'], true);
+      bkShow(['tp-bk-input', 'tp-bk-merge', 'tp-bk-replace'], false);
+      el('tp-bk-res').innerHTML = '저장하고 있습니다\u2026';
       el('tp-bk-note').textContent =
-        '이 내용을 메모앱이나 메일에 보관하세요. 앱을 다시 설치한 뒤 복구에 사용합니다. 현재 ' +
-        state.tasks.length + '건.';
+        '파일을 잃어버리면 복구할 수 없습니다. 파일 보내기로 메일이나 드라이브에 한 부 옮겨두시는 걸 권합니다.';
+      var ok = await saveBackupFile();
+      bkShow(['tp-bk-share'], !!(ok && lastBackupUri));
     } else {
       el('tp-bk-text').value = '';
-      el('tp-bk-note').textContent = '보관해 둔 백업 내용을 붙여넣고 불러오기를 누르세요.';
+      bkShow(['tp-bk-input', 'tp-bk-merge', 'tp-bk-replace'], true);
+      bkShow(['tp-bk-res', 'tp-bk-share'], false);
+      el('tp-bk-note').textContent =
+        '백업 파일을 선택하면 내용이 아래에 표시됩니다. 확인한 뒤 불러오기를 누르세요.';
     }
     el('tp-bk').scrollIntoView({ block: 'nearest' });
   }
@@ -1683,6 +1780,7 @@
   function finishRestore(msg) {
     el('tp-bk-note').textContent = msg;
     el('tp-bk-text').value = '';
+    el('tp-bk-input').value = '';
     state.date = todayISO();
     state.calMonth = state.date.slice(0, 7);
     state.tab = 'day';
@@ -1690,6 +1788,36 @@
   }
 
   el('tp-restore').addEventListener('click', function () { openBackup('restore'); });
+
+  el('tp-bk-input').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      el('tp-bk-text').value = String(rd.result || '');
+      var arr = null;
+      try { arr = JSON.parse(el('tp-bk-text').value); } catch (e) {}
+      el('tp-bk-note').textContent = Array.isArray(arr)
+        ? f.name + ' 읽음 · ' + arr.length + '건. 불러오기 방식을 선택하세요.'
+        : f.name + ' 을 읽었지만 백업 형식이 아닙니다.';
+    };
+    rd.onerror = function () { el('tp-bk-note').textContent = '파일을 읽지 못했습니다.'; };
+    rd.readAsText(f);
+  });
+
+  el('tp-bk-share').addEventListener('click', async function () {
+    var SH = plug('Share');
+    if (!SH || !SH.share || !lastBackupUri) {
+      warn('공유 기능을 쓸 수 없습니다. 파일 앱에서 직접 옮겨주세요.');
+      return;
+    }
+    try {
+      await SH.share({ title: '할일관리 백업', files: [lastBackupUri], dialogTitle: '백업 파일 보내기' });
+    } catch (e) {
+      try { await SH.share({ title: '할일관리 백업', url: lastBackupUri }); }
+      catch (e2) { warn('공유 창을 열지 못했습니다.'); }
+    }
+  });
   el('tp-bk-close').addEventListener('click', function () { el('tp-bk').classList.remove('on'); });
   el('tp-bk-copy').addEventListener('click', function () {
     copyText(el('tp-bk-text').value, this, '백업');

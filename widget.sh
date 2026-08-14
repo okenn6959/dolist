@@ -362,6 +362,21 @@ EOF
 
 # ---------- 매니페스트에 위젯 등록 ----------
 M=android/app/src/main/AndroidManifest.xml
+
+# 구형 안드로이드(API 29 이하)에서 백업 파일 저장용
+if ! grep -q "WRITE_EXTERNAL_STORAGE" "$M"; then
+  python3 - "$M" <<'EOF'
+import sys
+p = sys.argv[1]
+s = open(p, encoding='utf-8').read()
+perm = ('    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"\n'
+        '        android:maxSdkVersion="29" />\n'
+        '    <application')
+s = s.replace('    <application', perm, 1)
+open(p, 'w', encoding='utf-8').write(s)
+EOF
+fi
+
 if ! grep -q "DoListWidget" "$M"; then
 python3 - "$M" <<'EOF'
 import sys
