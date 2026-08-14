@@ -33,6 +33,12 @@ jobs:
       - name: 안드로이드 프로젝트 생성
         run: npx cap add android
 
+      - name: 알림 권한 추가
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's|<application|<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />\n    <application|' $M
+          grep uses-permission $M
+
       - name: 아이콘 적용
         run: |
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
