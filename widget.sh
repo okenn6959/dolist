@@ -16,6 +16,23 @@ cat > "$RES/drawable/widget_bg.xml" <<'EOF'
 </shape>
 EOF
 
+# ---------- 표 구분선 ----------
+cat > "$RES/drawable/w_div_h.xml" <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <size android:height="1dp" android:width="1dp" />
+    <solid android:color="#D6DAE0" />
+</shape>
+EOF
+
+cat > "$RES/drawable/w_div_v.xml" <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <size android:width="1dp" android:height="1dp" />
+    <solid android:color="#E6E9ED" />
+</shape>
+EOF
+
 # ---------- 위젯 레이아웃 ----------
 {
 cat <<'EOF'
@@ -26,49 +43,92 @@ cat <<'EOF'
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/widget_bg"
-    android:padding="14dp">
+    android:padding="12dp">
 
     <TextView android:id="@+id/w_head"
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:textColor="#14171C" android:textSize="15sp" android:textStyle="bold"
+        android:textColor="#14171C" android:textSize="17sp" android:textStyle="bold"
         android:text="오늘 할 일" android:maxLines="1" android:ellipsize="end" />
 
     <TextView android:id="@+id/w_sub"
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:textColor="#8E96A2" android:textSize="11sp"
-        android:layout_marginTop="1dp" android:layout_marginBottom="8dp"
+        android:textColor="#8E96A2" android:textSize="12sp"
+        android:layout_marginTop="2dp" android:layout_marginBottom="9dp"
         android:text="" android:maxLines="1" android:ellipsize="end" />
 
     <TextView android:id="@+id/w_empty"
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:textColor="#5A626E" android:textSize="13sp"
+        android:textColor="#5A626E" android:textSize="15sp"
+        android:paddingTop="6dp"
         android:text="오늘 할 일이 없습니다" android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:divider="@drawable/w_div_h"
+        android:showDividers="beginning|middle|end">
+
+        <LinearLayout android:id="@+id/w_thead"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:divider="@drawable/w_div_v"
+            android:showDividers="middle">
+            <TextView
+                android:layout_width="56dp" android:layout_height="wrap_content"
+                android:paddingTop="7dp" android:paddingBottom="7dp"
+                android:gravity="center"
+                android:textColor="#5A626E" android:textSize="13sp" android:textStyle="bold"
+                android:text="우선순위" />
+            <TextView
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:paddingStart="9dp" android:paddingEnd="9dp"
+                android:paddingTop="7dp" android:paddingBottom="7dp"
+                android:textColor="#5A626E" android:textSize="13sp" android:textStyle="bold"
+                android:text="업무" />
+            <TextView
+                android:layout_width="62dp" android:layout_height="wrap_content"
+                android:paddingTop="7dp" android:paddingBottom="7dp"
+                android:gravity="center"
+                android:textColor="#5A626E" android:textSize="13sp" android:textStyle="bold"
+                android:text="진행" />
+        </LinearLayout>
 EOF
 
 for i in 1 2 3 4 5; do
 cat <<EOF
 
-    <LinearLayout android:id="@+id/w_r$i"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:layout_marginBottom="7dp"
-        android:visibility="gone">
-        <TextView android:id="@+id/w_p$i"
-            android:layout_width="17dp" android:layout_height="wrap_content"
-            android:textColor="#B3261E" android:textSize="12sp" android:textStyle="bold"
-            android:text="A" />
-        <TextView android:id="@+id/w_t$i"
-            android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="#14171C" android:textSize="13sp"
-            android:maxLines="1" android:ellipsize="end" android:text="" />
-        <TextView android:id="@+id/w_m$i"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginStart="7dp"
-            android:textColor="#8E96A2" android:textSize="11sp" android:text="" />
-    </LinearLayout>
+        <LinearLayout android:id="@+id/w_r$i"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:divider="@drawable/w_div_v"
+            android:showDividers="middle"
+            android:visibility="gone">
+            <TextView android:id="@+id/w_p$i"
+                android:layout_width="56dp" android:layout_height="wrap_content"
+                android:paddingTop="9dp" android:paddingBottom="9dp"
+                android:gravity="center"
+                android:textColor="#B3261E" android:textSize="16sp" android:textStyle="bold"
+                android:text="A" />
+            <TextView android:id="@+id/w_t$i"
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:paddingStart="9dp" android:paddingEnd="9dp"
+                android:paddingTop="9dp" android:paddingBottom="9dp"
+                android:textColor="#14171C" android:textSize="15sp"
+                android:maxLines="1" android:ellipsize="end" android:text="" />
+            <TextView android:id="@+id/w_m$i"
+                android:layout_width="62dp" android:layout_height="wrap_content"
+                android:paddingTop="9dp" android:paddingBottom="9dp"
+                android:gravity="center"
+                android:textColor="#5A626E" android:textSize="13sp"
+                android:maxLines="1" android:ellipsize="end" android:text="" />
+        </LinearLayout>
 EOF
 done
 
+echo ""
+echo "    </LinearLayout>"
 echo ""
 echo "</LinearLayout>"
 } > "$RES/layout/dolist_widget.xml"
@@ -78,7 +138,7 @@ cat > "$RES/xml/dolist_widget_info.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
-    android:minHeight="110dp"
+    android:minHeight="180dp"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/dolist_widget"
     android:previewLayout="@layout/dolist_widget"
@@ -133,7 +193,7 @@ public class DoListWidget extends AppWidgetProvider {
                         JSONObject it = items.getJSONObject(i);
                         String p = it.optString("p", "B");
                         v.setTextViewText(PRIO[i], p);
-                        v.setTextColor(PRIO[i], "A".equals(p) ? 0xFFB3261E : 0xFF8E96A2);
+                        v.setTextColor(PRIO[i], "A".equals(p) ? 0xFFB3261E : 0xFF5A626E);
                         v.setTextViewText(TITLE[i], it.optString("t", ""));
                         v.setTextViewText(MEMO[i], it.optString("m", ""));
                         v.setViewVisibility(ROW[i], View.VISIBLE);
@@ -146,6 +206,7 @@ public class DoListWidget extends AppWidgetProvider {
         }
 
         for (int i = shown; i < ROW.length; i++) v.setViewVisibility(ROW[i], View.GONE);
+        v.setViewVisibility(R.id.w_thead, shown == 0 ? View.GONE : View.VISIBLE);
         v.setViewVisibility(R.id.w_empty, shown == 0 ? View.VISIBLE : View.GONE);
 
         Intent open = new Intent(ctx, MainActivity.class);
@@ -215,5 +276,5 @@ EOF
 fi
 
 echo "=== 위젯 파일 생성 완료 ==="
-ls -1 "$PKG_DIR" "$RES/layout/dolist_widget.xml" "$RES/xml/dolist_widget_info.xml"
+ls -1 "$PKG_DIR"
 grep -c DoListWidget "$M"
