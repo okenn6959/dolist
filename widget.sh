@@ -60,7 +60,7 @@ cat <<'EOF'
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:textColor="#5A626E" android:textSize="15sp"
         android:paddingTop="6dp"
-        android:text="오늘 할 일이 없습니다" android:visibility="gone" />
+        android:text="등록된 할 일이 없습니다" android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -74,7 +74,7 @@ cat <<'EOF'
             android:divider="@drawable/w_div_v"
             android:showDividers="middle">
             <TextView
-                android:layout_width="56dp" android:layout_height="wrap_content"
+                android:layout_width="54dp" android:layout_height="wrap_content"
                 android:paddingTop="7dp" android:paddingBottom="7dp"
                 android:gravity="center"
                 android:textColor="#5A626E" android:textSize="13sp" android:textStyle="bold"
@@ -87,45 +87,62 @@ cat <<'EOF'
                 android:textColor="#5A626E" android:textSize="13sp" android:textStyle="bold"
                 android:text="업무" />
             <TextView
-                android:layout_width="62dp" android:layout_height="wrap_content"
+                android:layout_width="66dp" android:layout_height="wrap_content"
                 android:paddingTop="7dp" android:paddingBottom="7dp"
                 android:gravity="center"
                 android:textColor="#5A626E" android:textSize="13sp" android:textStyle="bold"
-                android:text="진행" />
+                android:text="날짜" />
         </LinearLayout>
 EOF
 
-for i in 1 2 3 4 5; do
+band () {
 cat <<EOF
 
-        <LinearLayout android:id="@+id/w_r$i"
+        <TextView android:id="@+id/w_band_$1"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="#ECEEF0"
+            android:paddingStart="9dp" android:paddingTop="5dp" android:paddingBottom="5dp"
+            android:textColor="#5A626E" android:textSize="12sp" android:textStyle="bold"
+            android:text="$2" android:visibility="gone" />
+EOF
+}
+
+row () {
+cat <<EOF
+
+        <LinearLayout android:id="@+id/w_r$1"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:divider="@drawable/w_div_v"
             android:showDividers="middle"
             android:visibility="gone">
-            <TextView android:id="@+id/w_p$i"
-                android:layout_width="56dp" android:layout_height="wrap_content"
+            <TextView android:id="@+id/w_p$1"
+                android:layout_width="54dp" android:layout_height="wrap_content"
                 android:paddingTop="9dp" android:paddingBottom="9dp"
                 android:gravity="center"
                 android:textColor="#B3261E" android:textSize="16sp" android:textStyle="bold"
                 android:text="A" />
-            <TextView android:id="@+id/w_t$i"
+            <TextView android:id="@+id/w_t$1"
                 android:layout_width="0dp" android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:paddingStart="9dp" android:paddingEnd="9dp"
                 android:paddingTop="9dp" android:paddingBottom="9dp"
                 android:textColor="#14171C" android:textSize="15sp"
                 android:maxLines="1" android:ellipsize="end" android:text="" />
-            <TextView android:id="@+id/w_m$i"
-                android:layout_width="62dp" android:layout_height="wrap_content"
+            <TextView android:id="@+id/w_m$1"
+                android:layout_width="66dp" android:layout_height="wrap_content"
                 android:paddingTop="9dp" android:paddingBottom="9dp"
                 android:gravity="center"
                 android:textColor="#5A626E" android:textSize="13sp"
                 android:maxLines="1" android:ellipsize="end" android:text="" />
         </LinearLayout>
 EOF
-done
+}
+
+band a "오늘"
+for i in a1 a2 a3 a4; do row $i; done
+band b "예정"
+for i in b1 b2 b3 b4; do row $i; done
 
 echo ""
 echo "    </LinearLayout>"
@@ -138,7 +155,7 @@ cat > "$RES/xml/dolist_widget_info.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
-    android:minHeight="180dp"
+    android:minHeight="220dp"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/dolist_widget"
     android:previewLayout="@layout/dolist_widget"
@@ -164,14 +181,39 @@ import org.json.JSONObject;
 
 public class DoListWidget extends AppWidgetProvider {
 
-    private static final int[] ROW = {R.id.w_r1, R.id.w_r2, R.id.w_r3, R.id.w_r4, R.id.w_r5};
-    private static final int[] PRIO = {R.id.w_p1, R.id.w_p2, R.id.w_p3, R.id.w_p4, R.id.w_p5};
-    private static final int[] TITLE = {R.id.w_t1, R.id.w_t2, R.id.w_t3, R.id.w_t4, R.id.w_t5};
-    private static final int[] MEMO = {R.id.w_m1, R.id.w_m2, R.id.w_m3, R.id.w_m4, R.id.w_m5};
+    private static final int[] ROW_A = {R.id.w_ra1, R.id.w_ra2, R.id.w_ra3, R.id.w_ra4};
+    private static final int[] PRIO_A = {R.id.w_pa1, R.id.w_pa2, R.id.w_pa3, R.id.w_pa4};
+    private static final int[] TITLE_A = {R.id.w_ta1, R.id.w_ta2, R.id.w_ta3, R.id.w_ta4};
+    private static final int[] DATE_A = {R.id.w_ma1, R.id.w_ma2, R.id.w_ma3, R.id.w_ma4};
+
+    private static final int[] ROW_B = {R.id.w_rb1, R.id.w_rb2, R.id.w_rb3, R.id.w_rb4};
+    private static final int[] PRIO_B = {R.id.w_pb1, R.id.w_pb2, R.id.w_pb3, R.id.w_pb4};
+    private static final int[] TITLE_B = {R.id.w_tb1, R.id.w_tb2, R.id.w_tb3, R.id.w_tb4};
+    private static final int[] DATE_B = {R.id.w_mb1, R.id.w_mb2, R.id.w_mb3, R.id.w_mb4};
 
     @Override
     public void onUpdate(Context ctx, AppWidgetManager mgr, int[] ids) {
         for (int id : ids) render(ctx, mgr, id);
+    }
+
+    private int fill(RemoteViews v, JSONArray items, int[] row, int[] prio, int[] title, int[] date) {
+        int shown = 0;
+        if (items != null) {
+            for (int i = 0; i < row.length && i < items.length(); i++) {
+                try {
+                    JSONObject it = items.getJSONObject(i);
+                    String p = it.optString("p", "B");
+                    v.setTextViewText(prio[i], p);
+                    v.setTextColor(prio[i], "A".equals(p) ? 0xFFB3261E : 0xFF5A626E);
+                    v.setTextViewText(title[i], it.optString("t", ""));
+                    v.setTextViewText(date[i], it.optString("d", ""));
+                    v.setViewVisibility(row[i], View.VISIBLE);
+                    shown++;
+                } catch (Exception ignored) { }
+            }
+        }
+        for (int i = shown; i < row.length; i++) v.setViewVisibility(row[i], View.GONE);
+        return shown;
     }
 
     private void render(Context ctx, AppWidgetManager mgr, int widgetId) {
@@ -180,34 +222,26 @@ public class DoListWidget extends AppWidgetProvider {
         SharedPreferences sp = ctx.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
         String raw = sp.getString("widget_today", "");
 
-        int shown = 0;
+        int a = 0, b = 0;
         try {
             if (raw != null && raw.length() > 2) {
                 JSONObject o = new JSONObject(raw);
                 v.setTextViewText(R.id.w_head, o.optString("head", "오늘 할 일"));
                 v.setTextViewText(R.id.w_sub, o.optString("sub", ""));
-
-                JSONArray items = o.optJSONArray("items");
-                if (items != null) {
-                    for (int i = 0; i < ROW.length && i < items.length(); i++) {
-                        JSONObject it = items.getJSONObject(i);
-                        String p = it.optString("p", "B");
-                        v.setTextViewText(PRIO[i], p);
-                        v.setTextColor(PRIO[i], "A".equals(p) ? 0xFFB3261E : 0xFF5A626E);
-                        v.setTextViewText(TITLE[i], it.optString("t", ""));
-                        v.setTextViewText(MEMO[i], it.optString("m", ""));
-                        v.setViewVisibility(ROW[i], View.VISIBLE);
-                        shown++;
-                    }
-                }
+                a = fill(v, o.optJSONArray("today"), ROW_A, PRIO_A, TITLE_A, DATE_A);
+                b = fill(v, o.optJSONArray("next"), ROW_B, PRIO_B, TITLE_B, DATE_B);
+            } else {
+                fill(v, null, ROW_A, PRIO_A, TITLE_A, DATE_A);
+                fill(v, null, ROW_B, PRIO_B, TITLE_B, DATE_B);
             }
         } catch (Exception e) {
             v.setTextViewText(R.id.w_sub, "목록을 읽지 못했습니다");
         }
 
-        for (int i = shown; i < ROW.length; i++) v.setViewVisibility(ROW[i], View.GONE);
-        v.setViewVisibility(R.id.w_thead, shown == 0 ? View.GONE : View.VISIBLE);
-        v.setViewVisibility(R.id.w_empty, shown == 0 ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.w_band_a, a == 0 ? View.GONE : View.VISIBLE);
+        v.setViewVisibility(R.id.w_band_b, b == 0 ? View.GONE : View.VISIBLE);
+        v.setViewVisibility(R.id.w_thead, (a + b) == 0 ? View.GONE : View.VISIBLE);
+        v.setViewVisibility(R.id.w_empty, (a + b) == 0 ? View.VISIBLE : View.GONE);
 
         Intent open = new Intent(ctx, MainActivity.class);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);

@@ -47,11 +47,19 @@
   }
 
   .tp-date {
+    display: block;
+    font-family: var(--sans);
     font-size: 27px;
     font-weight: 700;
     letter-spacing: -0.02em;
     margin: 6px 0 0;
+    padding: 0;
     line-height: 1.15;
+    text-align: left;
+    background: none;
+    border: 0;
+    color: var(--ink);
+    cursor: pointer;
   }
   .tp-date span { color: var(--ink-faint); font-weight: 500; }
 
@@ -101,6 +109,19 @@
     text-transform: uppercase;
     color: var(--ink-faint);
     margin-bottom: 5px;
+  }
+  .tp-form textarea {
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 11px;
+    min-height: 72px;
+    resize: vertical;
   }
   .tp-form input[type="text"], .tp-form input[type="date"] {
     width: 100%;
@@ -204,7 +225,23 @@
   .tp-task.is-done .tp-stamp { border-color: var(--done); color: var(--done); }
 
   .tp-body { flex: 1; min-width: 0; }
-  .tp-title { font-size: 15.5px; font-weight: 600; line-height: 1.4; margin: 0; word-break: break-word; }
+  .tp-title {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font-family: var(--sans);
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: pointer;
+  }
   .tp-task.is-done .tp-title { color: var(--ink-faint); text-decoration: line-through; text-decoration-thickness: 1px; }
 
   .tp-meta {
@@ -390,12 +427,14 @@
   .tp-cell.pad { background: none; border-color: transparent; cursor: default; }
   .tp-cell.is-today { border-color: var(--ink); border-width: 1.5px; }
   .tp-cell.is-sel { background: var(--ink); border-color: var(--ink); color: #fff; }
-  .tp-cell .cnt {
-    font-size: 10px;
-    font-weight: 700;
+  .tp-cell .dots {
+    font-size: 12px;
     line-height: 1;
+    letter-spacing: 1.5px;
     color: var(--ink-faint);
   }
+  .tp-cell.has-a .dots { color: var(--stamp); }
+  .tp-cell.is-sel .dots { color: rgba(255,255,255,.8); }
   .tp-cell.has-a .cnt { color: var(--stamp); }
   .tp-cell.is-sel .cnt { color: rgba(255,255,255,.75); }
   .tp-cell .dash { font-size: 10px; line-height: 1; color: var(--line); }
@@ -432,7 +471,7 @@
 
   <header>
     <div class="tp-eyebrow">할일관리</div>
-    <h1 class="tp-date" id="tp-date">불러오는 중</h1>
+    <button class="tp-date" id="tp-date" data-act="cal" aria-label="달력 열기">불러오는 중</button>
     <div class="tp-stat" id="tp-stat"></div>
     <button class="tp-today-btn" id="tp-today-btn">오늘로 돌아가기</button>
   </header>
@@ -444,7 +483,7 @@
   <div class="tp-form" id="tp-form">
     <div class="tp-field">
       <label class="tp-label" for="tp-title">할 일</label>
-      <input type="text" id="tp-title" placeholder="예: 벤더 회신 확인" autocomplete="off">
+      <textarea id="tp-title" rows="3" placeholder="예: 벤더 회신 확인&#10;줄바꿈으로 세부 내용을 적을 수 있습니다"></textarea>
     </div>
 
     <div class="tp-field">
@@ -468,7 +507,7 @@
     </div>
 
     <div class="tp-field">
-      <label class="tp-label" for="tp-remind">알림 시각 · 비우면 알림 없음</label>
+      <label class="tp-label" for="tp-remind">알림 시각 · 기본 오전 8시, 비우면 알림 없음</label>
       <input type="time" id="tp-remind">
     </div>
 
@@ -503,7 +542,7 @@
 (function () {
   var KEY = 'dolist.tasks.v1';
   var OWNER = 'dolist.owner';
-  var state = { tasks: [], tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null };
+  var state = { tasks: [], tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null, editId: null };
 
   var el = function (id) { return document.getElementById(id); };
   var banner = el('tp-banner');
@@ -680,21 +719,54 @@
 
   function mirrorWidget() {
     if (!PREF) return;
-    var d = new Date();
+
+    var today = todayISO();
     var days = ['일', '월', '화', '수', '목', '금', '토'];
-    var list = widgetItems();
-    var late = list.filter(function (t) { return t.due && dayDiff(t.due) > 0; }).length;
+    var d = new Date();
+    var order = { A: 0, B: 1, C: 2 };
+
+    function flat(t) { return String(t.title || '').replace(/\s+/g, ' ').trim(); }
+    function byPrio(a, b) {
+      if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      return (a.due || '9999').localeCompare(b.due || '9999');
+    }
+
+    var open = state.tasks.filter(function (x) { return !x.done; });
+
+    var todayList = open.filter(function (t) {
+      return !t.due || t.due === today || dayDiff(t.due) > 0;
+    }).sort(function (a, b) {
+      var la = a.due ? dayDiff(a.due) : 0, lb = b.due ? dayDiff(b.due) : 0;
+      if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
+      return byPrio(a, b);
+    });
+
+    var nextList = open.filter(function (t) {
+      return t.due && dayDiff(t.due) < 0;
+    }).sort(function (a, b) {
+      return (a.due || '').localeCompare(b.due || '') || byPrio(a, b);
+    });
+
+    var late = todayList.filter(function (t) { return t.due && dayDiff(t.due) > 0; }).length;
+
+    function shortDate(iso) {
+      var p = iso.split('-');
+      return Number(p[1]) + '/' + Number(p[2]);
+    }
 
     var payload = {
       head: (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + days[d.getDay()] + '요일',
-      sub: '남은 일 ' + list.length + (late ? ' · 밀린 일 ' + late : ''),
-      items: list.slice(0, 5).map(function (t) {
-        var late1 = t.due && dayDiff(t.due) > 0;
+      sub: '오늘 ' + todayList.length + '건 · 예정 ' + nextList.length + '건' +
+        (late ? ' · 밀림 ' + late : ''),
+      today: todayList.slice(0, 4).map(function (t) {
         return {
           p: t.prio,
-          t: t.title,
-          m: late1 ? dayDiff(t.due) + '일 밀림' : (t.progress || 0) + '%'
+          t: flat(t),
+          d: (t.due && dayDiff(t.due) > 0) ? dayDiff(t.due) + '일 밀림' : '오늘'
         };
+      }),
+      next: nextList.slice(0, 4).map(function (t) {
+        return { p: t.prio, t: flat(t), d: shortDate(t.due) };
       })
     };
 
@@ -818,7 +890,7 @@
       '<button class="tp-stamp" data-act="prio" data-id="' + t.id + '" title="우선순위 바꾸기">' +
       (t.done ? '\u2713' : esc(t.prio)) + '</button>' +
       '<div class="tp-body">' +
-        '<h3 class="tp-title">' + esc(t.title) + '</h3>' +
+        '<button class="tp-title" data-act="edit" data-id="' + t.id + '">' + esc(t.title) + '</button>' +
         '<div class="tp-meta">' + meta.join('') + '</div>' +
         '<div class="tp-bar"><i style="width:' + (t.done ? 100 : (t.progress || 0)) + '%"></i></div>' +
         '<div class="tp-acts">' + acts + '</div>' + noteForm + notes +
@@ -856,11 +928,12 @@
       if (iso === state.date) cls += ' is-sel';
       if (info && info.a) cls += ' has-a';
       h += '<button class="' + cls + '" data-date="' + iso + '">' + day +
-        (info ? '<span class="cnt">' + info.n + '</span>' : '<span class="dash">\u00B7</span>') +
+        (info ? '<span class="dots">' + '\u25CF'.repeat(Math.min(info.n, 3)) + '</span>'
+              : '<span class="dash">\u00B7</span>') +
         '</button>';
     }
 
-    h += '</div><p class="tp-cal-hint">날짜를 누르면 그 날 목록으로 이동합니다<br>붉은 숫자는 A 우선순위가 있는 날입니다</p>';
+    h += '</div><p class="tp-cal-hint">날짜를 누르면 그 날 목록으로 이동합니다<br>붉은 점은 A 우선순위가 있는 날입니다</p>';
     el('tp-cal').innerHTML = h;
   }
 
@@ -886,9 +959,28 @@
   }
 
   function add() {
-    var title = el('tp-title').value.trim();
+    var title = el('tp-title').value.replace(/[ \t]+$/gm, '').trim();
     if (!title) { el('tp-title').focus(); return; }
     var owner = el('tp-owner').value.trim();
+    if (owner) localStorage.setItem(OWNER, owner);
+
+    if (state.editId) {
+      var t = find(state.editId);
+      if (t) {
+        t.title = title;
+        t.owner = owner;
+        t.prio = state.prio;
+        t.due = el('tp-due').value || state.date;
+        t.remind = el('tp-remind').value || null;
+        state.date = t.due;
+        state.calMonth = state.date.slice(0, 7);
+        state.tab = 'day';
+      }
+      closeForm();
+      syncTabs(); render(); save(); syncNotifications();
+      return;
+    }
+
     state.tasks.push({
       id: 't' + Date.now() + Math.floor(Math.random() * 900 + 100),
       title: title, owner: owner, prio: state.prio,
@@ -901,12 +993,49 @@
       })(),
       progress: 0, notes: [], done: false, createdAt: Date.now()
     });
-    if (owner) localStorage.setItem(OWNER, owner);
     el('tp-title').value = '';
     state.date = state.tasks[state.tasks.length - 1].due;
     state.calMonth = state.date.slice(0, 7);
     state.tab = 'day';
     syncTabs(); render(); save(); syncNotifications();
+  }
+
+  function syncPrio() {
+    document.querySelectorAll('#tp-prio button').forEach(function (x) {
+      x.setAttribute('aria-pressed', x.dataset.p === state.prio ? 'true' : 'false');
+    });
+  }
+
+  function openForm(t) {
+    state.editId = t ? t.id : null;
+    el('tp-form').classList.add('on');
+    el('tp-open').style.display = 'none';
+
+    if (t) {
+      el('tp-title').value = t.title;
+      el('tp-owner').value = t.owner || '';
+      el('tp-due').value = t.due || state.date;
+      el('tp-remind').value = t.remind || '';
+      state.prio = t.prio;
+      el('tp-save').textContent = '수정 저장';
+      el('tp-cancel').textContent = '수정 취소';
+    } else {
+      el('tp-title').value = '';
+      el('tp-due').value = state.date;
+      el('tp-remind').value = '08:00';
+      el('tp-save').textContent = '목록에 넣기';
+      el('tp-cancel').textContent = '닫기';
+    }
+    syncPrio();
+    el('tp-title').focus();
+  }
+
+  function closeForm() {
+    state.editId = null;
+    el('tp-form').classList.remove('on');
+    el('tp-open').style.display = 'block';
+    el('tp-save').textContent = '목록에 넣기';
+    el('tp-cancel').textContent = '닫기';
   }
 
   function syncTabs() {
@@ -944,26 +1073,28 @@
       if (state.tab === 'cal') state.calMonth = state.date.slice(0, 7);
       syncTabs(); render(); return;
     }
+    if (b.dataset.act === 'cal') {
+      state.tab = 'cal';
+      state.calMonth = state.date.slice(0, 7);
+      syncTabs(); render(); return;
+    }
     if (b.dataset.date) {
       state.date = b.dataset.date;
       state.tab = 'day';
       state.noteOpen = null;
+      if (el('tp-form').classList.contains('on')) el('tp-due').value = state.date;
       syncTabs(); render(); return;
     }
     if (b.dataset.mon) {
       state.calMonth = addMonth(state.calMonth, Number(b.dataset.mon));
       renderCal(); return;
     }
-    if (b.dataset.p) {
-      state.prio = b.dataset.p;
-      document.querySelectorAll('#tp-prio button').forEach(function (x) {
-        x.setAttribute('aria-pressed', x.dataset.p === state.prio ? 'true' : 'false');
-      });
-      return;
-    }
+    if (b.dataset.p) { state.prio = b.dataset.p; syncPrio(); return; }
 
     var act = b.dataset.act, t = b.dataset.id ? find(b.dataset.id) : null;
     if (!act || (b.dataset.id && !t)) return;
+
+    if (act === 'edit') { openForm(t); return; }
 
     if (act === 'prio' && !t.done) { t.prio = t.prio === 'A' ? 'B' : t.prio === 'B' ? 'C' : 'A'; }
     else if (act === 'prog') { t.progress = Math.min(100, (t.progress || 0) + 25); }
@@ -985,18 +1116,9 @@
     if (act === 'done' || act === 'undo' || act === 'del') syncNotifications();
   });
 
-  el('tp-open').addEventListener('click', function () {
-    el('tp-form').classList.add('on');
-    el('tp-open').style.display = 'none';
-    el('tp-due').value = state.date;
-    el('tp-title').focus();
-  });
-  el('tp-cancel').addEventListener('click', function () {
-    el('tp-form').classList.remove('on');
-    el('tp-open').style.display = 'block';
-  });
+  el('tp-open').addEventListener('click', function () { openForm(null); });
+  el('tp-cancel').addEventListener('click', closeForm);
   el('tp-save').addEventListener('click', add);
-  el('tp-title').addEventListener('keydown', function (e) { if (e.key === 'Enter') add(); });
 
   document.querySelector('.tp-wrap').addEventListener('keydown', function (e) {
     if (e.key !== 'Enter') return;
