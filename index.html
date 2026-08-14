@@ -449,6 +449,155 @@
     line-height: 1.6;
   }
 
+  /* 페이지 모드 */
+  .tp-wrap.on-page > header,
+  .tp-wrap.on-page > .tp-rule,
+  .tp-wrap.on-page > .tp-open,
+  .tp-wrap.on-page > .tp-bell,
+  .tp-wrap.on-page > .tp-tabs,
+  .tp-wrap.on-page > .tp-cal,
+  .tp-wrap.on-page > #tp-list,
+  .tp-wrap.on-page > .tp-foot { display: none !important; }
+  .tp-wrap.page-list > .tp-form { display: none !important; }
+
+  .tp-page { display: none; }
+  .tp-wrap.on-page .tp-page { display: block; }
+
+  /* 날짜 스트립 */
+  .tp-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0 12px;
+    touch-action: pan-y;
+  }
+  .tp-strip .arw {
+    flex: 0 0 auto;
+    width: 38px; height: 38px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-size: 16px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .tp-strip .mid { flex: 1; min-width: 0; text-align: center; }
+  .tp-strip .big {
+    font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  .tp-strip .rel {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-top: 3px;
+    letter-spacing: 0.04em;
+  }
+
+  .tp-swipe-hint {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    text-align: center;
+    padding-bottom: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  /* 상태표 */
+  .tp-tbl { border-top: 1px solid var(--line); }
+  .tp-thead, .tp-tr {
+    display: grid;
+    grid-template-columns: 50px 1fr 74px;
+    align-items: center;
+  }
+  .tp-thead {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    border-bottom: 1px solid var(--line);
+    background: #ECEEF0;
+  }
+  .tp-thead span { padding: 7px 6px; text-align: center; }
+  .tp-thead span:nth-child(2) { text-align: left; padding-left: 10px; }
+
+  .tp-tr {
+    width: 100%;
+    background: var(--card);
+    border: 0;
+    border-bottom: 1px solid var(--line-soft);
+    padding: 0;
+    font-family: var(--sans);
+    text-align: left;
+    cursor: pointer;
+  }
+  .tp-tr > * { padding: 11px 6px; }
+  .tp-tr .pr {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    align-self: stretch;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tp-tr[data-prio="A"] .pr { color: var(--stamp); }
+  .tp-tr .ct {
+    padding-left: 10px;
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .tp-tr .ct em {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-style: normal;
+    font-weight: 500;
+    color: var(--ink-faint);
+    margin-top: 3px;
+  }
+  .tp-tr.is-done .ct { color: var(--ink-faint); text-decoration: line-through; }
+  .tp-tr .st { text-align: center; }
+  .tp-chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 4px 6px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    background: var(--paper);
+    white-space: nowrap;
+  }
+  .tp-chip.done { color: var(--done); border-color: #BFD8D2; }
+  .tp-chip.late { color: var(--stamp); border-color: #E8C9C6; }
+  .tp-chip.prog { color: var(--ink); }
+
+  .tp-page-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 0 14px;
+  }
+  .tp-page-bar button {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 9px 13px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tp-page-bar strong { font-size: 16px; font-weight: 700; }
+
   .tp-banner {
     background: #FBF0EF;
     border: 1px solid #E8C9C6;
@@ -477,6 +626,11 @@
   </header>
 
   <hr class="tp-rule">
+
+  <div class="tp-page" id="tp-page">
+    <div id="tp-page-bar"></div>
+    <div id="tp-page-body"></div>
+  </div>
 
   <button class="tp-open" id="tp-open">할 일 추가</button>
 
@@ -532,6 +686,7 @@
   <div id="tp-list"></div>
 
   <div class="tp-foot">
+    <button id="tp-openlist">날짜별 목록</button>
     <button id="tp-copy">오늘 목록 복사</button>
     <button id="tp-backup">백업 복사</button>
     <button id="tp-clear">완료함 비우기</button>
@@ -542,7 +697,7 @@
 (function () {
   var KEY = 'dolist.tasks.v1';
   var OWNER = 'dolist.owner';
-  var state = { tasks: [], tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null, editId: null };
+  var state = { tasks: [], page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null, editId: null };
 
   var el = function (id) { return document.getElementById(id); };
   var banner = el('tp-banner');
@@ -937,7 +1092,111 @@
     el('tp-cal').innerHTML = h;
   }
 
+  function shiftDate(delta) {
+    var d = new Date(state.date + 'T00:00:00');
+    d.setDate(d.getDate() + delta);
+    state.date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+    state.calMonth = state.date.slice(0, 7);
+    if (state.page !== 'edit' && el('tp-form').classList.contains('on')) {
+      el('tp-due').value = state.date;
+    }
+  }
+
+  function attachSwipe(node, canSwipe) {
+    var x0 = 0, y0 = 0, live = false;
+    node.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1 || !canSwipe()) { live = false; return; }
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; live = true;
+    }, { passive: true });
+    node.addEventListener('touchend', function (e) {
+      if (!live) return;
+      live = false;
+      var t = e.changedTouches[0];
+      var dx = t.clientX - x0, dy = t.clientY - y0;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      shiftDate(dx < 0 ? 1 : -1);
+      render();
+    }, { passive: true });
+  }
+
+  /* ---------- 날짜별 목록 페이지 ---------- */
+
+  function pageList() {
+    var iso = state.date, isToday = iso === todayISO();
+    return state.tasks.filter(function (x) {
+      if (!x.due) return isToday;
+      if (x.due === iso) return true;
+      return isToday && !x.done && dayDiff(x.due) > 0;
+    }).sort(function (a, b) {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      var order = { A: 0, B: 1, C: 2 };
+      var la = a.due ? dayDiff(a.due) : 0, lb = b.due ? dayDiff(b.due) : 0;
+      if (!a.done && (la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
+      if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      return (a.due || '9999').localeCompare(b.due || '9999');
+    });
+  }
+
+  function statusChip(t) {
+    if (t.done) return '<span class="tp-chip done">완료</span>';
+    if (t.due && dayDiff(t.due) > 0) return '<span class="tp-chip late">' + dayDiff(t.due) + '일 지연</span>';
+    if (t.progress > 0) return '<span class="tp-chip prog">' + t.progress + '%</span>';
+    return '<span class="tp-chip">대기</span>';
+  }
+
+  function renderPage() {
+    var days = ['일', '월', '화', '수', '목', '금', '토'];
+
+    if (state.page === 'edit') {
+      el('tp-page-bar').className = 'tp-page-bar';
+      el('tp-page-bar').innerHTML =
+        '<button data-act="pageback">\u2039 뒤로</button><strong>할 일 편집</strong>';
+      el('tp-page-body').innerHTML = '';
+      return;
+    }
+
+    var iso = state.date;
+    var d = new Date(iso + 'T00:00:00');
+    var list = pageList();
+
+    el('tp-page-bar').className = 'tp-strip';
+    el('tp-page-bar').innerHTML =
+      '<button class="arw" data-act="prevday" aria-label="이전 날">\u2039</button>' +
+      '<div class="mid"><div class="big">' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' +
+      days[d.getDay()] + '요일</div><div class="rel">' + relLabel(iso) +
+      ' · 전체 ' + list.length + '건</div></div>' +
+      '<button class="arw" data-act="nextday" aria-label="다음 날">\u203A</button>';
+
+    var rows = list.map(function (t) {
+      var meta = [];
+      if (t.owner) meta.push(esc(t.owner));
+      if (t.remind && !t.done) meta.push('\u23F0 ' + esc(t.remind));
+      if (t.due && t.due !== iso) meta.push('마감 ' + esc(fmtDue(t.due)));
+      return '<button class="tp-tr' + (t.done ? ' is-done' : '') + '" data-prio="' + esc(t.prio) +
+        '" data-act="edit" data-id="' + t.id + '">' +
+        '<span class="pr">' + (t.done ? '\u2713' : esc(t.prio)) + '</span>' +
+        '<span class="ct">' + esc(t.title) +
+        (meta.length ? '<em>' + meta.join(' · ') + '</em>' : '') + '</span>' +
+        '<span class="st">' + statusChip(t) + '</span></button>';
+    }).join('');
+
+    el('tp-page-body').innerHTML =
+      '<div class="tp-swipe-hint">좌우로 넘기면 날짜가 바뀝니다</div>' +
+      (list.length
+        ? '<div class="tp-tbl"><div class="tp-thead"><span>순위</span><span>내용</span><span>상태</span></div>' +
+          rows + '</div>'
+        : '<div class="tp-empty"><strong>이 날에는 할 일이 없습니다</strong>다른 날짜로 넘겨보세요.</div>') +
+      '<div class="tp-page-bar" style="padding-top:16px"><button data-act="pagehome">\u2039 홈으로</button>' +
+      '<button data-act="pagenew">이 날에 추가</button></div>';
+  }
+
   function render() {
+    var wrap = document.querySelector('.tp-wrap');
+    wrap.className = 'tp-wrap' + (state.page ? ' on-page page-' + state.page : '');
+
+    if (state.page) { renderPage(); return; }
+
     header();
     var isCal = state.tab === 'cal';
     el('tp-cal').className = 'tp-cal' + (isCal ? ' on' : '');
@@ -997,6 +1256,7 @@
     state.date = state.tasks[state.tasks.length - 1].due;
     state.calMonth = state.date.slice(0, 7);
     state.tab = 'day';
+    closeForm();
     syncTabs(); render(); save(); syncNotifications();
   }
 
@@ -1006,7 +1266,9 @@
     });
   }
 
-  function openForm(t) {
+  function openForm(t, from) {
+    state.editFrom = from || 'main';
+    if (state.editFrom === 'list') state.page = 'edit';
     state.editId = t ? t.id : null;
     el('tp-form').classList.add('on');
     el('tp-open').style.display = 'none';
@@ -1031,6 +1293,8 @@
   }
 
   function closeForm() {
+    if (state.page === 'edit') state.page = state.editFrom === 'list' ? 'list' : null;
+    state.editFrom = 'main';
     state.editId = null;
     el('tp-form').classList.remove('on');
     el('tp-open').style.display = 'block';
@@ -1089,12 +1353,17 @@
       state.calMonth = addMonth(state.calMonth, Number(b.dataset.mon));
       renderCal(); return;
     }
-    if (b.dataset.p) { state.prio = b.dataset.p; syncPrio(); return; }
+    if (b.dataset.p && b.closest('#tp-prio')) { state.prio = b.dataset.p; syncPrio(); return; }
 
     var act = b.dataset.act, t = b.dataset.id ? find(b.dataset.id) : null;
     if (!act || (b.dataset.id && !t)) return;
 
-    if (act === 'edit') { openForm(t); return; }
+    if (act === 'edit') { openForm(t, state.page === 'list' ? 'list' : 'main'); render(); return; }
+    if (act === 'prevday') { shiftDate(-1); render(); return; }
+    if (act === 'nextday') { shiftDate(1); render(); return; }
+    if (act === 'pageback') { closeForm(); render(); return; }
+    if (act === 'pagehome') { state.page = null; state.tab = 'day'; syncTabs(); render(); return; }
+    if (act === 'pagenew') { openForm(null, 'list'); render(); return; }
 
     if (act === 'prio' && !t.done) { t.prio = t.prio === 'A' ? 'B' : t.prio === 'B' ? 'C' : 'A'; }
     else if (act === 'prog') { t.progress = Math.min(100, (t.progress || 0) + 25); }
@@ -1173,6 +1442,37 @@
     if (s.daily) syncNotifications();
   });
 
+  el('tp-openlist').addEventListener('click', function () {
+    state.page = 'list';
+    render();
+  });
+
+  attachSwipe(el('tp-list'), function () { return !state.page && state.tab === 'day'; });
+  attachSwipe(el('tp-page'), function () { return state.page === 'list'; });
+
+  async function checkOpenView() {
+    if (!PREF) return;
+    try {
+      var r = await PREF.get({ key: 'open_view' });
+      if (!r || !r.value) r = await PREF.get({ key: '_cap_open_view' });
+      if (r && r.value) {
+        try { await PREF.remove({ key: 'open_view' }); } catch (e2) {}
+        try { await PREF.remove({ key: '_cap_open_view' }); } catch (e2) {}
+        state.date = todayISO();
+        state.calMonth = state.date.slice(0, 7);
+        state.editId = null;
+        el('tp-form').classList.remove('on');
+        el('tp-open').style.display = 'block';
+        state.page = 'list';
+        render();
+      }
+    } catch (e) {}
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') checkOpenView();
+  });
+
   el('tp-today-btn').addEventListener('click', function () {
     state.date = todayISO();
     state.calMonth = state.date.slice(0, 7);
@@ -1186,6 +1486,7 @@
   render();
   renderBell();
   mirrorWidget();
+  checkOpenView();
   if (NATIVE) syncNotifications();
 })();
 </script>

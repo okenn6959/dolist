@@ -221,6 +221,7 @@ public class DoListWidget extends AppWidgetProvider {
 
         SharedPreferences sp = ctx.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
         String raw = sp.getString("widget_today", "");
+        if (raw == null || raw.length() < 3) raw = sp.getString("_cap_widget_today", "");
 
         int a = 0, b = 0;
         try {
@@ -245,6 +246,7 @@ public class DoListWidget extends AppWidgetProvider {
 
         Intent open = new Intent(ctx, MainActivity.class);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        open.putExtra("open_view", "list");
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         v.setOnClickPendingIntent(R.id.w_root, PendingIntent.getActivity(ctx, 0, open, flags));
 
@@ -259,16 +261,46 @@ package kr.dolist.planner;
 
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
 
     @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        handleOpenView(getIntent());
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleOpenView(intent);
+    }
+
+    @Override
     public void onPause() {
         super.onPause();
         refreshWidget();
+    }
+
+    /** 위젯에서 열었을 때 어떤 화면을 띄울지 웹 쪽에 남긴다 */
+    private void handleOpenView(Intent intent) {
+        try {
+            if (intent == null) return;
+            String view = intent.getStringExtra("open_view");
+            if (view == null || view.length() == 0) return;
+            SharedPreferences sp = getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
+            SharedPreferences.Editor ed = sp.edit();
+            ed.putString("open_view", view);
+            ed.putString("_cap_open_view", view);
+            ed.apply();
+        } catch (Exception ignored) { }
     }
 
     private void refreshWidget() {
