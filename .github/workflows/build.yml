@@ -39,6 +39,11 @@ jobs:
           sed -i 's|<application|<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />\n    <application|' $M
           grep uses-permission $M
 
+      - name: 위젯 파일 생성
+        run: |
+          chmod +x widget.sh
+          bash widget.sh
+
       - name: 아이콘 적용
         run: |
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
