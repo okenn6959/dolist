@@ -442,6 +442,65 @@
   }
   .tp-today-btn.on { display: inline-block; }
 
+  .tp-cal { display: none; padding-top: 4px; }
+  .tp-cal.on { display: block; }
+
+  .tp-cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 2px 10px;
+  }
+  .tp-cal-nav strong { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .tp-cal-nav button {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 36px; height: 34px;
+    font-size: 15px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+
+  .tp-dow, .tp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .tp-dow div {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+    padding-bottom: 6px;
+  }
+
+  .tp-cell {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: var(--card);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0;
+  }
+  .tp-cell.pad { background: none; border-color: transparent; cursor: default; }
+  .tp-cell.is-today { border-color: var(--ink); border-width: 1.5px; }
+  .tp-cell.is-sel { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .tp-cal-hint {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align: center;
+    padding: 14px 0 2px;
+    line-height: 1.6;
+  }
+
   .tp-cell .dots { display: flex; gap: 3px; height: 5px; align-items: center; justify-content: center; }
   .tp-cell .dots i { width: 4.5px; height: 4.5px; border-radius: 50%; background: var(--ink-faint); }
   .tp-cell.has-a .dots i:first-child { background: var(--stamp); }
@@ -1422,10 +1481,13 @@
       if (iso === todayISO()) cls += ' is-today';
       if (iso === state.date) cls += ' is-sel';
       if (info && info.a) cls += ' has-a';
+      var dots = '';
+      if (info) {
+        var dn = Math.min(info.n, 3);
+        for (var k = 0; k < dn; k++) dots += '<i></i>';
+      }
       h += '<button class="' + cls + '" data-date="' + iso + '">' + day +
-        (info ? '<span class="dots">' + '\u25CF'.repeat(Math.min(info.n, 3)) + '</span>'
-              : '<span class="dash">\u00B7</span>') +
-        '</button>';
+        '<span class="dots">' + dots + '</span></button>';
     }
 
     h += '</div><p class="tp-cal-hint">날짜를 누르면 그 날 목록으로 이동합니다<br>붉은 점은 A 우선순위가 있는 날입니다</p>';
