@@ -413,6 +413,20 @@
     cursor: pointer;
   }
 
+  /* 페이지 모드: 목록/편집 페이지일 때 기본 화면을 감춘다 */
+  .tp-wrap.on-page > header,
+  .tp-wrap.on-page > .tp-rule,
+  .tp-wrap.on-page > .tp-open,
+  .tp-wrap.on-page > .tp-tabs,
+  .tp-wrap.on-page > .tp-cal,
+  .tp-wrap.on-page > #tp-list,
+  .tp-wrap.on-page > .tp-foot,
+  .tp-wrap.on-page > .tp-bk { display: none !important; }
+  .tp-wrap.page-list > .tp-form { display: none !important; }
+
+  .tp-page { display: none; }
+  .tp-wrap.on-page .tp-page { display: block; }
+
   .tp-today-btn {
     display: none;
     margin-top: 9px;
@@ -512,6 +526,7 @@
   }
   .tp-tr[data-prio="A"] .pr { color: var(--stamp); }
   .tp-tr .ct {
+    text-align: left;
     padding-left: 10px;
     font-size: 14.5px;
     font-weight: 600;
