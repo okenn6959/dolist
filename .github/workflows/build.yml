@@ -53,29 +53,58 @@ jobs:
           done
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
-      - name: 서명키 고정
+      - name: 서명키 확인 및 설정
         run: |
-          if [ -f debug.keystore ]; then
-            mkdir -p ~/.android
-            cp debug.keystore ~/.android/debug.keystore
-            echo "고정 서명키 적용됨"
-          else
-            echo "::error::debug.keystore 파일이 저장소에 없습니다. 업데이트 설치가 실패합니다."
+          if [ ! -f debug.keystore ]; then
+            echo "::error::debug.keystore 파일이 저장소 최상위에 없습니다."
             exit 1
           fi
+          echo "keystore 크기: $(wc -c < debug.keystore) bytes"
+          keytool -list -keystore debug.keystore -storepass android | head -5
+
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
+
+          python3 - <<'PY'
+          p = 'android/app/build.gradle'
+          s = open(p, encoding='utf-8').read()
+          block = """
+              signingConfigs {
+                  debug {
+                      storeFile file("../../debug.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                  }
+              }
+          """
+          if 'signingConfigs' not in s:
+              i = s.index('android {') + len('android {')
+              s = s[:i] + block + s[i:]
+              open(p, 'w', encoding='utf-8').write(s)
+              print('서명 설정 주입 완료')
+          else:
+              print('이미 서명 설정 있음')
+          PY
 
       - name: 버전 번호 올리기
         run: |
           G=android/app/build.gradle
           sed -i "s/versionCode .*/versionCode ${{ github.run_number }}/" $G
           sed -i "s/versionName .*/versionName \"1.0.${{ github.run_number }}\"/" $G
-          grep -E "versionCode|versionName" $G
+          grep -E "versionCode|versionName|storeFile" $G
 
       - name: APK 빌드
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+
+      - name: 서명 지문 확인
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          echo "===== 이 APK 의 서명 지문 ====="
+          keytool -printcert -jarfile $APK | grep -A1 "SHA256" | head -4 || echo "지문을 읽지 못했습니다"
 
       - name: APK 올리기
         uses: actions/upload-artifact@v4
