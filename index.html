@@ -413,51 +413,6 @@
     cursor: pointer;
   }
 
-  .tp-bell {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin-top: 12px;
-    padding: 11px 12px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-  }
-  .tp-bell-txt { flex: 1; font-size: 13.5px; font-weight: 600; min-width: 0; }
-  .tp-bell-txt em {
-    display: block;
-    font-family: var(--mono);
-    font-size: 10.5px;
-    font-style: normal;
-    font-weight: 500;
-    color: var(--ink-faint);
-    letter-spacing: 0.04em;
-    margin-top: 2px;
-  }
-  .tp-bell input[type="time"] {
-    font-family: var(--mono);
-    font-size: 15px;
-    color: var(--ink);
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    padding: 7px 8px;
-  }
-  .tp-bell button {
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    background: var(--ink);
-    color: #fff;
-    border: 0;
-    border-radius: 7px;
-    padding: 9px 13px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .tp-bell.is-on button { background: var(--card); color: var(--done); border: 1px solid #BFD8D2; }
-  .tp-bell.is-off button[disabled] { background: var(--line); color: var(--ink-faint); }
-
   .tp-today-btn {
     display: none;
     margin-top: 9px;
@@ -473,93 +428,11 @@
   }
   .tp-today-btn.on { display: inline-block; }
 
-  .tp-cal { display: none; padding-top: 4px; }
-  .tp-cal.on { display: block; }
+  .tp-cell .dots { display: flex; gap: 3px; height: 5px; align-items: center; justify-content: center; }
+  .tp-cell .dots i { width: 4.5px; height: 4.5px; border-radius: 50%; background: var(--ink-faint); }
+  .tp-cell.has-a .dots i:first-child { background: var(--stamp); }
+  .tp-cell.is-sel .dots i { background: rgba(255,255,255,.85); }
 
-  .tp-cal-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 2px 10px;
-  }
-  .tp-cal-nav strong { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
-  .tp-cal-nav button {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    width: 36px; height: 34px;
-    font-size: 15px;
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
-
-  .tp-dow, .tp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-  .tp-dow div {
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
-    color: var(--ink-faint);
-    padding-bottom: 6px;
-  }
-  .tp-dow div:first-child, .tp-dow div:last-child { color: var(--ink-faint); opacity: .7; }
-
-  .tp-cell {
-    aspect-ratio: 1 / 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    background: var(--card);
-    border: 1px solid var(--line-soft);
-    border-radius: 8px;
-    font-family: var(--mono);
-    font-size: 13.5px;
-    color: var(--ink);
-    cursor: pointer;
-    padding: 0;
-  }
-  .tp-cell.pad { background: none; border-color: transparent; cursor: default; }
-  .tp-cell.is-today { border-color: var(--ink); border-width: 1.5px; }
-  .tp-cell.is-sel { background: var(--ink); border-color: var(--ink); color: #fff; }
-  .tp-cell .dots {
-    font-size: 12px;
-    line-height: 1;
-    letter-spacing: 1.5px;
-    color: var(--ink-faint);
-  }
-  .tp-cell.has-a .dots { color: var(--stamp); }
-  .tp-cell.is-sel .dots { color: rgba(255,255,255,.8); }
-  .tp-cell.has-a .cnt { color: var(--stamp); }
-  .tp-cell.is-sel .cnt { color: rgba(255,255,255,.75); }
-  .tp-cell .dash { font-size: 10px; line-height: 1; color: var(--line); }
-  .tp-cell.is-sel .dash { color: rgba(255,255,255,.35); }
-
-  .tp-cal-hint {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--ink-faint);
-    text-align: center;
-    padding: 14px 0 2px;
-    line-height: 1.6;
-  }
-
-  /* 페이지 모드 */
-  .tp-wrap.on-page > header,
-  .tp-wrap.on-page > .tp-rule,
-  .tp-wrap.on-page > .tp-open,
-  .tp-wrap.on-page > .tp-bell,
-  .tp-wrap.on-page > .tp-tabs,
-  .tp-wrap.on-page > .tp-cal,
-  .tp-wrap.on-page > #tp-list,
-  .tp-wrap.on-page > .tp-foot { display: none !important; }
-  .tp-wrap.page-list > .tp-form { display: none !important; }
-
-  .tp-page { display: none; }
-  .tp-wrap.on-page .tp-page { display: block; }
-
-  /* 날짜 스트립 */
   .tp-strip {
     display: flex;
     align-items: center;
@@ -578,10 +451,7 @@
     cursor: pointer;
   }
   .tp-strip .mid { flex: 1; min-width: 0; text-align: center; }
-  .tp-strip .big {
-    font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
-    line-height: 1.2;
-  }
+  .tp-strip .big { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
   .tp-strip .rel {
     font-family: var(--mono);
     font-size: 11px;
@@ -599,11 +469,10 @@
     letter-spacing: 0.04em;
   }
 
-  /* 상태표 */
   .tp-tbl { border-top: 1px solid var(--line); }
   .tp-thead, .tp-tr {
     display: grid;
-    grid-template-columns: 50px 1fr 74px;
+    grid-template-columns: 50px 1fr 78px;
     align-items: center;
   }
   .tp-thead {
@@ -623,18 +492,22 @@
     border: 0;
     border-bottom: 1px solid var(--line-soft);
     padding: 0;
-    font-family: var(--sans);
     text-align: left;
-    cursor: pointer;
   }
-  .tp-tr > * { padding: 11px 6px; }
+  .tp-tr > * {
+    padding: 11px 6px;
+    background: none;
+    border: 0;
+    font-family: var(--sans);
+    cursor: pointer;
+    align-self: stretch;
+  }
   .tp-tr .pr {
     text-align: center;
     font-family: var(--mono);
     font-size: 15px;
     font-weight: 700;
     color: var(--ink-soft);
-    align-self: stretch;
     display: flex; align-items: center; justify-content: center;
   }
   .tp-tr[data-prio="A"] .pr { color: var(--stamp); }
@@ -657,13 +530,13 @@
     margin-top: 3px;
   }
   .tp-tr.is-done .ct { color: var(--ink-faint); text-decoration: line-through; }
-  .tp-tr .st { text-align: center; }
+  .tp-tr .st { text-align: center; display: flex; align-items: center; justify-content: center; }
   .tp-chip {
     display: inline-block;
     font-family: var(--mono);
     font-size: 10.5px;
     font-weight: 700;
-    padding: 4px 6px;
+    padding: 5px 7px;
     border-radius: 5px;
     border: 1px solid var(--line);
     color: var(--ink-soft);
@@ -673,6 +546,9 @@
   .tp-chip.done { color: var(--done); border-color: #BFD8D2; }
   .tp-chip.late { color: var(--stamp); border-color: #E8C9C6; }
   .tp-chip.prog { color: var(--ink); }
+  .tp-chip.dele { color: #4A5AA8; border-color: #C6CCE8; }
+  .tp-chip.canc { color: var(--ink-faint); }
+  .tp-chip.post { color: #8A5A12; border-color: #E3D3B4; }
 
   .tp-page-bar {
     display: flex;
@@ -694,7 +570,37 @@
   }
   .tp-page-bar strong { font-size: 16px; font-weight: 700; }
 
-  /* 권한 안내 모달 */
+  .tp-outcome { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .tp-outcome button {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    border-radius: 7px;
+    padding: 8px 12px;
+    cursor: pointer;
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+  }
+  .tp-outcome button[data-o="done"] { color: var(--done); border-color: #BFD8D2; }
+  .tp-outcome button[data-o="cancel"] { color: var(--stamp); border-color: #E8C9C6; }
+
+  .tp-postpone { display: flex; gap: 6px; margin-top: 9px; align-items: center; }
+  .tp-postpone input {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 15px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 9px 10px;
+    color: var(--ink);
+  }
+  .tp-postpone button {
+    background: var(--ink); color: #fff; border: 0; border-radius: 7px;
+    padding: 0 15px; font-size: 13px; font-weight: 600; cursor: pointer; height: 38px;
+  }
+
   .tp-modal {
     display: none;
     position: fixed;
@@ -713,56 +619,22 @@
     max-width: 360px;
     width: 100%;
   }
-  .tp-modal-card h2 {
-    margin: 0 0 8px;
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-  }
-  .tp-modal-card p {
-    margin: 0 0 15px;
-    font-size: 13.5px;
-    line-height: 1.6;
-    color: var(--ink-soft);
-  }
+  .tp-modal-card h2 { margin: 0 0 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .tp-modal-card p { margin: 0 0 15px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); }
   .tp-modal-card .prim {
-    width: 100%;
-    background: var(--ink);
-    color: #fff;
-    border: 0;
-    border-radius: 9px;
-    padding: 13px;
-    font-family: var(--sans);
-    font-size: 14.5px;
-    font-weight: 600;
-    cursor: pointer;
+    width: 100%; background: var(--ink); color: #fff; border: 0; border-radius: 9px;
+    padding: 13px; font-family: var(--sans); font-size: 14.5px; font-weight: 600; cursor: pointer;
   }
   .tp-modal-card .sec {
-    width: 100%;
-    background: var(--card);
-    color: var(--ink-soft);
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    padding: 12px;
-    font-family: var(--sans);
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 8px;
+    width: 100%; background: var(--card); color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 9px; padding: 12px;
+    font-family: var(--sans); font-size: 13.5px; font-weight: 600; cursor: pointer; margin-top: 8px;
   }
   .tp-modal-card .ghost {
-    width: 100%;
-    background: none;
-    border: 0;
-    color: var(--ink-faint);
-    font-family: var(--sans);
-    font-size: 13px;
-    padding: 11px;
-    cursor: pointer;
-    margin-top: 4px;
+    width: 100%; background: none; border: 0; color: var(--ink-faint);
+    font-family: var(--sans); font-size: 13px; padding: 11px; cursor: pointer; margin-top: 4px;
   }
 
-  /* 백업 / 복구 패널 */
   .tp-bk { display: none; margin-top: 12px; }
   .tp-bk.on { display: block; }
   .tp-bk-file {
@@ -778,15 +650,9 @@
     margin-bottom: 8px;
   }
   .tp-bk-file::file-selector-button {
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    background: var(--ink);
-    color: #fff;
-    border: 0;
-    border-radius: 7px;
-    padding: 9px 12px;
-    margin-right: 10px;
+    font-family: var(--sans); font-size: 13px; font-weight: 600;
+    background: var(--ink); color: #fff; border: 0; border-radius: 7px;
+    padding: 9px 12px; margin-right: 10px;
   }
   .tp-bk-res {
     font-family: var(--mono);
@@ -801,39 +667,17 @@
     word-break: break-all;
   }
   .tp-bk-res b { color: var(--done); }
-  .tp-bk textarea {
-    width: 100%;
-    min-height: 96px;
-    font-family: var(--mono);
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: var(--ink);
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    padding: 10px;
-    resize: vertical;
-  }
   .tp-bk-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
   .tp-bk-row button {
-    font-family: var(--sans);
-    font-size: 12.5px;
-    font-weight: 600;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    padding: 9px 12px;
-    color: var(--ink-soft);
-    cursor: pointer;
+    font-family: var(--sans); font-size: 12.5px; font-weight: 600;
+    background: var(--card); border: 1px solid var(--line); border-radius: 7px;
+    padding: 9px 12px; color: var(--ink-soft); cursor: pointer;
   }
   .tp-bk-row button.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
   .tp-bk-row button.danger { color: var(--stamp); border-color: #E8C9C6; }
   .tp-bk-note {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    color: var(--ink-faint);
-    line-height: 1.6;
-    margin-top: 8px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint);
+    line-height: 1.6; margin-top: 8px;
   }
   .tp-stat .hint { color: var(--ink-faint); opacity: .85; }
 
@@ -986,12 +830,6 @@
     <button class="tp-del-edit" id="tp-del">이 할 일 삭제</button>
   </div>
 
-  <div class="tp-bell is-off" id="tp-bell">
-    <div class="tp-bell-txt">매일 알림<em id="tp-bell-state">꺼짐</em></div>
-    <input type="time" id="tp-bell-time" value="08:30" aria-label="매일 알림 시각">
-    <button id="tp-bell-toggle">켜기</button>
-  </div>
-
   <nav class="tp-tabs" role="tablist">
     <button class="tp-tab" role="tab" data-tab="day" aria-selected="true">날짜<span class="n" id="n-day"></span></button>
     <button class="tp-tab" role="tab" data-tab="cal" aria-selected="false">달력</button>
@@ -1027,7 +865,7 @@
 (function () {
   var KEY = 'dolist.tasks.v1';
   var OWNER = 'dolist.owner';
-  var state = { tasks: [], page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null, editId: null };
+  var state = { tasks: [], closeOpen: null, postponeOpen: null, page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null, editId: null };
 
   var el = function (id) { return document.getElementById(id); };
   var banner = el('tp-banner');
@@ -1291,21 +1129,6 @@
   var LN = (CAP && CAP.Plugins && CAP.Plugins.LocalNotifications) || null;
   var PREF = (CAP && CAP.Plugins && CAP.Plugins.Preferences) || null;
   var NATIVE = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform() && LN);
-  var SET = 'dolist.notify.v1';
-  var DAILY_ID = 9001;
-
-  function notifySet() {
-    try {
-      var s = JSON.parse(localStorage.getItem(SET));
-      if (s && typeof s === 'object') return { daily: !!s.daily, time: s.time || '08:30' };
-    } catch (e) {}
-    return { daily: false, time: '08:30' };
-  }
-
-  function notifySave(s) {
-    try { localStorage.setItem(SET, JSON.stringify(s)); } catch (e) {}
-  }
-
   function nidFor(t) {
     if (!t.nid) {
       var n = Number(localStorage.getItem('dolist.nid') || '1');
@@ -1332,18 +1155,6 @@
       if (old.length) await LN.cancel({ notifications: old });
 
       var list = [];
-      var s = notifySet();
-
-      if (s.daily) {
-        var hm = (s.time || '08:30').split(':');
-        list.push({
-          id: DAILY_ID,
-          title: '할일관리',
-          body: '오늘 목록을 확인하세요',
-          schedule: { on: { hour: Number(hm[0]), minute: Number(hm[1]) }, allowWhileIdle: true }
-        });
-      }
-
       var assigned = false;
       var limitISO = addDaysISO(todayISO(), 45), scheduled = 0;
       state.tasks.forEach(function (t) {
@@ -1447,31 +1258,6 @@
     try { PREF.set({ key: 'widget_today', value: JSON.stringify(payload) }); } catch (e) {}
   }
 
-  function renderBell() {
-    var s = notifySet();
-    var wrap = el('tp-bell');
-    var btn = el('tp-bell-toggle');
-    el('tp-bell-time').value = s.time;
-
-    if (!NATIVE) {
-      wrap.className = 'tp-bell is-off';
-      el('tp-bell-state').textContent = '설치한 앱에서만 동작';
-      btn.textContent = '켜기';
-      btn.disabled = true;
-      return;
-    }
-    btn.disabled = false;
-    if (s.daily) {
-      wrap.className = 'tp-bell is-on';
-      el('tp-bell-state').textContent = s.time + ' 알림 켜짐';
-      btn.textContent = '끄기';
-    } else {
-      wrap.className = 'tp-bell is-off';
-      el('tp-bell-state').textContent = '꺼짐';
-      btn.textContent = '켜기';
-    }
-  }
-
   function header() {
     var days = ['일', '월', '화', '수', '목', '금', '토'];
     var iso = state.date;
@@ -1539,7 +1325,7 @@
     meta.push('<span>' + esc(fmtDue(t.on)) + '</span>');
     if (late) meta.push('<span class="late">' + lateDays(t) + '일 지연</span>');
     if (t.rid) meta.push('<span>\u21BB 반복</span>');
-    if (t.done && t.doneAt) meta.push('<span>' + hhmm(t.doneAt) + ' 완료</span>');
+    if (t.done) meta.push('<span>' + (t.doneAt ? hhmm(t.doneAt) + ' ' : '') + outcomeOf(t).label + '</span>');
     if (!t.done) meta.push('<span>' + (t.progress || 0) + '%</span>');
     if (!t.done && t.remind) {
       var sameDay = !t.due || t.due === t.on;
@@ -1563,7 +1349,22 @@
         '<button data-act="del" data-id="' + t.id + '">삭제</button>'
       : '<button data-act="prog" data-id="' + t.id + '">진행 +25%</button>' +
         '<button data-act="note" data-id="' + t.id + '">메모</button>' +
-        '<button data-act="done" data-id="' + t.id + '">완료</button>';
+        '<button data-act="close" data-id="' + t.id + '">처리</button>';
+
+    var outcomeBox = '';
+    if (state.closeOpen === t.id) {
+      outcomeBox = '<div class="tp-outcome">' +
+        '<button data-act="oc" data-o="done" data-id="' + t.id + '">완료</button>' +
+        '<button data-act="oc" data-o="delegate" data-id="' + t.id + '">위임</button>' +
+        '<button data-act="oc" data-o="cancel" data-id="' + t.id + '">취소</button>' +
+        '<button data-act="oc" data-o="postpone" data-id="' + t.id + '">지연</button>' +
+        '</div>';
+    }
+    if (state.postponeOpen === t.id) {
+      outcomeBox += '<div class="tp-postpone">' +
+        '<input type="date" data-pdate="' + t.id + '" value="' + esc(addDaysISO(todayISO(), 1)) + '">' +
+        '<button data-act="pgo" data-id="' + t.id + '">이 날짜로</button></div>';
+    }
 
     return '<article class="tp-task' + (t.done ? ' is-done' : '') + '" data-p="' + esc(t.prio) + '">' +
       '<button class="tp-stamp" data-act="prio" data-id="' + t.id + '" title="우선순위 바꾸기">' +
@@ -1572,7 +1373,7 @@
         '<button class="tp-title" data-act="edit" data-id="' + t.id + '">' + esc(t.title) + '</button>' +
         '<div class="tp-meta">' + meta.join('') + '</div>' +
         '<div class="tp-bar"><i style="width:' + (t.done ? 100 : (t.progress || 0)) + '%"></i></div>' +
-        '<div class="tp-acts">' + acts + '</div>' + noteForm + notes +
+        '<div class="tp-acts">' + acts + '</div>' + outcomeBox + noteForm + notes +
       '</div></article>';
   }
 
@@ -1665,8 +1466,20 @@
     });
   }
 
+  var OUTCOME = {
+    done:    { label: '완료', cls: 'done' },
+    delegate:{ label: '위임', cls: 'dele' },
+    cancel:  { label: '취소', cls: 'canc' },
+    postpone:{ label: '지연', cls: 'post' }
+  };
+
+  function outcomeOf(t) { return OUTCOME[t.outcome] || OUTCOME.done; }
+
   function statusChip(t) {
-    if (t.done) return '<span class="tp-chip done">완료</span>';
+    if (t.done) {
+      var o = outcomeOf(t);
+      return '<span class="tp-chip ' + o.cls + '">' + o.label + '</span>';
+    }
     if (lateDays(t) > 0) return '<span class="tp-chip late">' + lateDays(t) + '일 지연</span>';
     if (t.progress > 0) return '<span class="tp-chip prog">' + t.progress + '%</span>';
     return '<span class="tp-chip">대기</span>';
@@ -1703,16 +1516,17 @@
       }
       if (t.on && t.on !== iso) meta.push('표시 ' + esc(fmtDue(t.on)));
       if (t.rid) meta.push('\u21BB 반복');
-      return '<button class="tp-tr' + (t.done ? ' is-done' : '') + '" data-prio="' + esc(t.prio) +
-        '" data-act="edit" data-id="' + t.id + '">' +
-        '<span class="pr">' + (t.done ? '\u2713' : esc(t.prio)) + '</span>' +
-        '<span class="ct">' + esc(t.title) +
-        (meta.length ? '<em>' + meta.join(' · ') + '</em>' : '') + '</span>' +
-        '<span class="st">' + statusChip(t) + '</span></button>';
+      return '<div class="tp-tr' + (t.done ? ' is-done' : '') + '" data-prio="' + esc(t.prio) + '">' +
+        '<button class="pr" data-act="edit" data-id="' + t.id + '">' +
+        (t.done ? '\u2713' : esc(t.prio)) + '</button>' +
+        '<button class="ct" data-act="edit" data-id="' + t.id + '">' + esc(t.title) +
+        (meta.length ? '<em>' + meta.join(' · ') + '</em>' : '') + '</button>' +
+        '<button class="st" data-act="step" data-id="' + t.id + '">' + statusChip(t) + '</button></div>';
     }).join('');
 
     el('tp-page-body').innerHTML =
-      '<div class="tp-swipe-hint">위쪽 날짜를 좌우로 넘기면 날짜가 바뀝니다</div>' +
+      '<div class="tp-swipe-hint">위쪽 날짜를 좌우로 넘기면 날짜가 바뀝니다<br>' +
+      '상태 칸을 누르면 25%씩 올라가고 100%에서 완료됩니다</div>' +
       (list.length
         ? '<div class="tp-tbl"><div class="tp-thead"><span>순위</span><span>내용</span><span>상태</span></div>' +
           rows + '</div>'
@@ -2040,6 +1854,8 @@
     if (b.classList.contains('tp-tab')) {
       state.tab = b.dataset.tab;
       state.noteOpen = null;
+      state.closeOpen = null;
+      state.postponeOpen = null;
       if (state.tab === 'cal') state.calMonth = state.date.slice(0, 7);
       syncTabs(); render(); return;
     }
@@ -2065,6 +1881,16 @@
     if (!act || (b.dataset.id && !t)) return;
 
     if (act === 'edit') { openForm(t, state.page === 'list' ? 'list' : 'main'); render(); return; }
+    if (act === 'step') {
+      if (t.done) {
+        t.done = false; t.doneAt = null; t.outcome = null; t.progress = 0;
+      } else if ((t.progress || 0) >= 100) {
+        t.done = true; t.doneAt = Date.now(); t.outcome = 'done';
+      } else {
+        t.progress = Math.min(100, (t.progress || 0) + 25);
+      }
+      render(); save(); syncNotifications(); return;
+    }
     if (act === 'prevday') { shiftDate(-1); render(); return; }
     if (act === 'nextday') { shiftDate(1); render(); return; }
     if (act === 'pageback') { closeForm(); render(); return; }
@@ -2082,13 +1908,52 @@
       render(); if (v) save();
       return;
     }
-    else if (act === 'done') { t.done = true; t.doneAt = Date.now(); t.progress = 100; }
-    else if (act === 'undo') { t.done = false; t.doneAt = null; t.progress = 75; }
+    else if (act === 'close') {
+      state.closeOpen = state.closeOpen === t.id ? null : t.id;
+      state.postponeOpen = null;
+      render(); return;
+    }
+    else if (act === 'oc') {
+      if (b.dataset.o === 'postpone') {
+        state.postponeOpen = t.id;
+        state.closeOpen = null;
+        render(); return;
+      }
+      t.done = true; t.doneAt = Date.now();
+      t.outcome = b.dataset.o;
+      if (b.dataset.o === 'done') t.progress = 100;
+      state.closeOpen = null;
+    }
+    else if (act === 'pgo') {
+      var pin = document.querySelector('[data-pdate="' + t.id + '"]');
+      var nd = pin ? pin.value : '';
+      if (!nd) { warn('옮길 날짜를 선택해 주세요.'); return; }
+      t.done = true; t.doneAt = Date.now(); t.outcome = 'postpone';
+      state.tasks.push({
+        id: 't' + Date.now() + Math.floor(Math.random() * 900 + 100),
+        title: t.title, owner: t.owner, prio: t.prio,
+        on: nd, due: nd, remind: t.remind,
+        rid: null, progress: t.progress || 0,
+        notes: (t.notes || []).slice(),
+        done: false, outcome: null, createdAt: Date.now(), nid: nextNid()
+      });
+      state.postponeOpen = null;
+      state.date = nd;
+      state.calMonth = nd.slice(0, 7);
+      render(); save(); syncNotifications();
+      info(fmtDue(nd) + '로 옮겼습니다');
+      return;
+    }
+    else if (act === 'done') { t.done = true; t.doneAt = Date.now(); t.outcome = 'done'; t.progress = 100; }
+    else if (act === 'undo') {
+      t.done = false; t.doneAt = null; t.outcome = null;
+      if (t.progress >= 100) t.progress = 75;
+    }
     else if (act === 'del') { state.tasks = state.tasks.filter(function (x) { return x.id !== t.id; }); }
     else return;
 
     render(); save();
-    if (act === 'done' || act === 'undo' || act === 'del') syncNotifications();
+    if (act === 'done' || act === 'oc' || act === 'undo' || act === 'del') syncNotifications();
   });
 
   el('tp-open').addEventListener('click', function () { openForm(null); });
@@ -2146,29 +2011,6 @@
 
   el('tp-backup').addEventListener('click', function () { openBackup('backup'); });
 
-  el('tp-bell-toggle').addEventListener('click', async function () {
-    var s = notifySet();
-    if (!s.daily) {
-      var ok = await askPermission();
-      if (!ok) { showPermModal('blocked'); return; }
-      s.daily = true;
-    } else {
-      s.daily = false;
-    }
-    s.time = el('tp-bell-time').value || '08:30';
-    notifySave(s);
-    renderBell();
-    syncNotifications();
-  });
-
-  el('tp-bell-time').addEventListener('change', function () {
-    var s = notifySet();
-    s.time = this.value || '08:30';
-    notifySave(s);
-    renderBell();
-    if (s.daily) syncNotifications();
-  });
-
   /* ---------- 알림 권한 안내 ---------- */
 
   var ASKED = 'dolist.permAsked';
@@ -2184,10 +2026,9 @@
   }
 
   function showPermModal(mode) {
-    var body = mode === 'blocked'
-      ? '알림이 차단되어 있어 켤 수 없습니다. 설정에서 할일관리의 알림을 허용해 주세요.'
-      : '마감 시각과 매일 아침에 알림을 보내드립니다. 알림을 허용하지 않으면 앱을 직접 열어야 할 일을 확인할 수 있습니다.';
-    el('tp-modal-body').textContent = body;
+    el('tp-modal-body').textContent = mode === 'blocked'
+      ? '알림이 차단되어 있습니다. 설정에서 할일관리의 알림을 허용해 주세요.'
+      : '할 일에 지정한 알림 날짜와 시각에 알려드립니다. 허용하지 않으면 앱을 직접 열어야 확인할 수 있습니다.';
     el('tp-modal-ok').style.display = mode === 'blocked' ? 'none' : 'block';
     el('tp-modal').classList.add('on');
   }
@@ -2209,13 +2050,9 @@
     localStorage.setItem(ASKED, '1');
     var ok = await askPermission();
     if (ok) {
-      var st = notifySet();
-      st.daily = true;
-      st.time = st.time || '08:30';
-      notifySave(st);
-      renderBell();
       syncNotifications();
       hidePermModal();
+      info('알림을 허용했습니다. 할 일마다 알림 날짜와 시각을 지정하시면 됩니다.');
     } else {
       showPermModal('blocked');
     }
@@ -2280,7 +2117,6 @@
       return false;
     }
 
-    // 앱이 아닌 브라우저에서 열었을 때
     try {
       var blob = new Blob([json], { type: 'application/json' });
       var a = document.createElement('a');
@@ -2330,13 +2166,10 @@
     if (!raw) { el('tp-bk-note').textContent = '먼저 백업 파일을 선택해 주세요.'; return null; }
     var arr;
     try { arr = JSON.parse(raw); } catch (e) {
-      el('tp-bk-note').textContent = '형식이 올바르지 않습니다. 백업 내용 전체를 붙여넣었는지 확인해 주세요.';
+      el('tp-bk-note').textContent = '형식이 올바르지 않습니다. 백업 파일이 맞는지 확인해 주세요.';
       return null;
     }
-    if (!Array.isArray(arr)) {
-      el('tp-bk-note').textContent = '백업 내용이 아닙니다.';
-      return null;
-    }
+    if (!Array.isArray(arr)) { el('tp-bk-note').textContent = '백업 내용이 아닙니다.'; return null; }
     var clean = arr.filter(function (t) { return t && t.id && t.title; }).map(function (t) {
       return {
         id: String(t.id),
@@ -2350,6 +2183,7 @@
         progress: Number(t.progress) || 0,
         notes: Array.isArray(t.notes) ? t.notes : [],
         done: !!t.done,
+        outcome: t.outcome || (t.done ? 'done' : null),
         doneAt: t.doneAt || null,
         nid: Number(t.nid) || 0,
         createdAt: t.createdAt || Date.now()
@@ -2371,6 +2205,7 @@
   }
 
   el('tp-restore').addEventListener('click', function () { openBackup('restore'); });
+  el('tp-bk-close').addEventListener('click', function () { el('tp-bk').classList.remove('on'); });
 
   el('tp-bk-input').addEventListener('change', function () {
     var f = this.files && this.files[0];
@@ -2401,7 +2236,6 @@
       catch (e2) { warn('공유 창을 열지 못했습니다.'); }
     }
   });
-  el('tp-bk-close').addEventListener('click', function () { el('tp-bk').classList.remove('on'); });
 
   el('tp-bk-merge').addEventListener('click', function () {
     var arr = parseBackup();
@@ -2466,7 +2300,6 @@
   loadRules();
   syncRules();
   render();
-  renderBell();
   mirrorWidget();
   checkOpenView();
   maybeAskPermission();
