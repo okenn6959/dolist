@@ -62,6 +62,17 @@
     cursor: pointer;
   }
   .tp-date span { color: var(--ink-faint); font-weight: 500; }
+  .tp-swipe-tip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-style: normal;
+    font-weight: 500;
+    color: var(--ink-faint);
+    margin-left: 7px;
+    vertical-align: 3px;
+    white-space: nowrap;
+  }
 
   .tp-stat {
     font-family: var(--mono);
@@ -152,8 +163,30 @@
     cursor: pointer;
   }
   .tp-seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
-  .tp-seg button[data-p="A"][aria-pressed="true"] { background: var(--stamp); border-color: var(--stamp); }
   .tp-seg .hint { display: block; font-family: var(--sans); font-size: 10px; font-weight: 500; opacity: .75; }
+
+  .tp-prio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tp-prio-grid button {
+    font-family: var(--mono);
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 12px 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .tp-prio-grid button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .tp-prio-grid button[data-p^="A"][aria-pressed="true"] { background: var(--stamp); border-color: var(--stamp); }
+  .tp-prio-legend {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--ink-faint);
+    margin: 8px 0 0;
+  }
 
   .tp-row2 { display: flex; gap: 10px; }
   .tp-row2 > * { flex: 1; }
@@ -391,14 +424,15 @@
     background: none;
     color: var(--ink-soft);
     font-family: var(--mono);
-    font-size: 15px;
+    font-size: 12.5px;
     font-weight: 700;
+    letter-spacing: -0.02em;
     cursor: pointer;
     transform: rotate(-6deg);
     transition: transform .12s ease;
   }
   .tp-stamp:active { transform: rotate(-6deg) scale(.93); }
-  .tp-task[data-p="A"] .tp-stamp { border-color: var(--stamp); color: var(--stamp); border-width: 2px; }
+  .tp-task[data-p^="A"] .tp-stamp { border-color: var(--stamp); color: var(--stamp); border-width: 2px; }
   .tp-task.is-done .tp-stamp { border-color: var(--done); color: var(--done); }
 
   .tp-body { flex: 1; min-width: 0; }
@@ -659,12 +693,12 @@
   .tp-tr .pr {
     text-align: center;
     font-family: var(--mono);
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--ink-soft);
     display: flex; align-items: center; justify-content: center;
   }
-  .tp-tr[data-prio="A"] .pr { color: var(--stamp); }
+  .tp-tr[data-prio^="A"] .pr { color: var(--stamp); }
   .tp-tr .ct {
     text-align: left;
     padding-left: 10px;
@@ -895,11 +929,18 @@
 
     <div class="tp-field">
       <span class="tp-label">우선순위</span>
-      <div class="tp-seg" id="tp-prio">
-        <button type="button" data-p="A" aria-pressed="true">A<span class="hint">오늘 필수</span></button>
-        <button type="button" data-p="B" aria-pressed="false">B<span class="hint">해야 함</span></button>
-        <button type="button" data-p="C" aria-pressed="false">C<span class="hint">하면 좋음</span></button>
+      <div class="tp-prio-grid" id="tp-prio">
+        <button type="button" data-p="A0" aria-pressed="true">A0</button>
+        <button type="button" data-p="A1" aria-pressed="false">A1</button>
+        <button type="button" data-p="A2" aria-pressed="false">A2</button>
+        <button type="button" data-p="B0" aria-pressed="false">B0</button>
+        <button type="button" data-p="B1" aria-pressed="false">B1</button>
+        <button type="button" data-p="B2" aria-pressed="false">B2</button>
+        <button type="button" data-p="C0" aria-pressed="false">C0</button>
+        <button type="button" data-p="C1" aria-pressed="false">C1</button>
+        <button type="button" data-p="C2" aria-pressed="false">C2</button>
       </div>
+      <p class="tp-prio-legend">A 오늘 필수 · B 해야 함 · C 하면 좋음<br>숫자가 작을수록 먼저 처리합니다</p>
     </div>
 
     <div class="tp-row2">
@@ -1023,7 +1064,7 @@
 (function () {
   var KEY = 'dolist.tasks.v1';
   var OWNER = 'dolist.owner';
-  var state = { tasks: [], owner: null, period: 'week', closeOpen: null, postponeOpen: null, page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null, editId: null };
+  var state = { tasks: [], owner: null, period: 'week', closeOpen: null, postponeOpen: null, page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'A0', noteOpen: null, editId: null };
 
   var el = function (id) { return document.getElementById(id); };
   var banner = el('tp-banner');
@@ -1063,6 +1104,25 @@
     y += Math.floor((m - 1) / 12);
     m = ((m - 1) % 12 + 12) % 12 + 1;
     return y + '-' + String(m).padStart(2, '0');
+  }
+
+  var PRIOS = ['A0', 'A1', 'A2', 'B0', 'B1', 'B2', 'C0', 'C1', 'C2'];
+
+  /** A0 이 가장 앞, C2 가 가장 뒤 */
+  function prioRank(p) {
+    p = String(p || 'B0');
+    var L = { A: 0, B: 1, C: 2 }[p.charAt(0)];
+    if (L === undefined) L = 1;
+    var n = parseInt(p.charAt(1), 10);
+    if (isNaN(n)) n = 0;
+    return L * 3 + Math.min(2, Math.max(0, n));
+  }
+
+  function normPrio(p) {
+    p = String(p || '').toUpperCase().trim();
+    if (PRIOS.indexOf(p) >= 0) return p;
+    if ('ABC'.indexOf(p) >= 0 && p.length === 1) return p + '0';
+    return 'B0';
   }
 
   function lateDays(t) {
@@ -1265,6 +1325,8 @@
       if (!t.on) { t.on = t.due || todayISO(); moved++; }
       if (!t.due) t.due = t.on;
       if (!t.seq) { t.seq = t.createdAt || Date.now(); moved++; }
+      var np = normPrio(t.prio);
+      if (np !== t.prio) { t.prio = np; moved++; }
     });
     if (moved) { try { localStorage.setItem(KEY, JSON.stringify(state.tasks)); } catch (e) {} }
 
@@ -1360,11 +1422,10 @@
       if (!x.on) return true;
       return x.on === today || dayDiff(x.on) > 0;
     });
-    var order = { A: 0, B: 1, C: 2 };
-    list.sort(function (a, b) {
+      list.sort(function (a, b) {
       var la = a.on ? dayDiff(a.on) : 0, lb = b.on ? dayDiff(b.on) : 0;
       if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
-      if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      if (prioRank(a.prio) !== prioRank(b.prio)) return prioRank(a.prio) - prioRank(b.prio);
       if ((a.seq || 0) !== (b.seq || 0)) return (a.seq || 0) - (b.seq || 0);
       return (a.on || '9999').localeCompare(b.on || '9999');
     });
@@ -1377,11 +1438,10 @@
     var today = todayISO();
     var days = ['일', '월', '화', '수', '목', '금', '토'];
     var d = new Date();
-    var order = { A: 0, B: 1, C: 2 };
-
+  
     function flat(t) { return String(t.title || '').replace(/\s+/g, ' ').trim(); }
     function byPrio(a, b) {
-      if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      if (prioRank(a.prio) !== prioRank(b.prio)) return prioRank(a.prio) - prioRank(b.prio);
       if ((a.seq || 0) !== (b.seq || 0)) return (a.seq || 0) - (b.seq || 0);
       return (a.on || '9999').localeCompare(b.on || '9999');
     }
@@ -1441,7 +1501,8 @@
     var isToday = iso === todayISO();
 
     el('tp-date').innerHTML = (d.getMonth() + 1) + '월 ' + d.getDate() + '일 <span>' +
-      days[d.getDay()] + '요일' + (isToday ? '' : ' · ' + relLabel(iso)) + '</span>';
+      days[d.getDay()] + '요일' + (isToday ? '' : ' · ' + relLabel(iso)) +
+      '</span><em class="tp-swipe-tip">(\u2194 스와이프 가능)</em>';
     el('tp-today-btn').className = 'tp-today-btn' + (isToday ? '' : ' on');
 
     var open = state.tasks.filter(function (t) { return !t.done; });
@@ -1450,7 +1511,6 @@
 
     var s = '<span>이 날 <b>' + dayN + '</b></span><span>남은 일 <b>' + open.length + '</b></span>';
     if (late.length) s += '<span class="late">지연 ' + late.length + '</span>';
-    if (state.tab === 'day') s += '<span class="hint">날짜 좌우 스와이프</span>';
     el('tp-stat').innerHTML = s;
 
     el('n-day').textContent = dayN || '';
@@ -1473,12 +1533,11 @@
       if (t === 'done') return x.done;
       return !x.done;
     });
-    var order = { A: 0, B: 1, C: 2 };
-    list.sort(function (a, b) {
+      list.sort(function (a, b) {
       if (t === 'done') return (b.doneAt || 0) - (a.doneAt || 0);
       var la = lateDays(a), lb = lateDays(b);
       if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
-      if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      if (prioRank(a.prio) !== prioRank(b.prio)) return prioRank(a.prio) - prioRank(b.prio);
       if ((a.seq || 0) !== (b.seq || 0)) return (a.seq || 0) - (b.seq || 0);
       return (a.on || '9999').localeCompare(b.on || '9999');
     });
@@ -1555,9 +1614,7 @@
         '<button data-act="del" data-id="' + t.id + '">삭제</button>'
       : '<button data-act="prog" data-id="' + t.id + '">진행 +25%</button>' +
         '<button data-act="note" data-id="' + t.id + '">메모</button>' +
-        '<button data-act="close" data-id="' + t.id + '">처리</button>' +
-        '<button data-act="up" data-id="' + t.id + '" aria-label="위로">\u25B2</button>' +
-        '<button data-act="down" data-id="' + t.id + '" aria-label="아래로">\u25BC</button>';
+        '<button data-act="close" data-id="' + t.id + '">처리</button>';
 
     var outcomeBox = '';
     if (state.closeOpen === t.id) {
@@ -1596,7 +1653,7 @@
       if (t.done || !t.on) return;
       if (!byDate[t.on]) byDate[t.on] = { n: 0, a: false };
       byDate[t.on].n++;
-      if (t.prio === 'A') byDate[t.on].a = true;
+      if (String(t.prio).charAt(0) === 'A') byDate[t.on].a = true;
     });
 
     var h = '<div class="tp-cal-nav">' +
@@ -1669,10 +1726,9 @@
       return isToday && !x.done && dayDiff(x.on) > 0;
     }).sort(function (a, b) {
       if (a.done !== b.done) return a.done ? 1 : -1;
-      var order = { A: 0, B: 1, C: 2 };
-      var la = lateDays(a), lb = lateDays(b);
+          var la = lateDays(a), lb = lateDays(b);
       if (!a.done && (la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
-      if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      if (prioRank(a.prio) !== prioRank(b.prio)) return prioRank(a.prio) - prioRank(b.prio);
       if ((a.seq || 0) !== (b.seq || 0)) return (a.seq || 0) - (b.seq || 0);
       return (a.on || '9999').localeCompare(b.on || '9999');
     });
@@ -1686,24 +1742,6 @@
   };
 
   function outcomeOf(t) { return OUTCOME[t.outcome] || OUTCOME.done; }
-
-  /** 같은 우선순위 묶음 안에서 순서를 옮긴다 */
-  function moveTask(t, dir) {
-    var list = state.page === 'list' ? pageList() : visible();
-    var same = function (x) {
-      return x.prio === t.prio && !!x.done === !!t.done &&
-        (lateDays(x) > 0) === (lateDays(t) > 0);
-    };
-    var group = list.filter(same);
-    var gi = group.indexOf(t);
-    if (gi < 0) return false;
-    var gj = gi + dir;
-    if (gj < 0 || gj >= group.length) return false;
-    group.splice(gi, 1);
-    group.splice(gj, 0, t);
-    group.forEach(function (x, k) { x.seq = k + 1; });
-    return true;
-  }
 
   function statusChip(t) {
     if (t.done) {
@@ -2187,10 +2225,6 @@
     if (!act || (b.dataset.id && !t)) return;
 
     if (act === 'edit') { openForm(t, state.page === 'list' ? 'list' : 'main'); render(); return; }
-    if (act === 'up' || act === 'down') {
-      if (moveTask(t, act === 'up' ? -1 : 1)) { render(); save(); }
-      return;
-    }
     if (act === 'step') {
       if (t.done) {
         t.done = false; t.doneAt = null; t.outcome = null; t.progress = 0;
@@ -2207,7 +2241,10 @@
     if (act === 'pagehome') { state.page = null; state.tab = 'day'; syncTabs(); render(); return; }
     if (act === 'pagenew') { openForm(null, 'list'); render(); return; }
 
-    if (act === 'prio' && !t.done) { t.prio = t.prio === 'A' ? 'B' : t.prio === 'B' ? 'C' : 'A'; }
+    if (act === 'prio' && !t.done) {
+      var pi = PRIOS.indexOf(normPrio(t.prio));
+      t.prio = PRIOS[(pi + 1) % PRIOS.length];
+    }
     else if (act === 'prog') { t.progress = Math.min(100, (t.progress || 0) + 25); }
     else if (act === 'note') { state.noteOpen = state.noteOpen === t.id ? null : t.id; render(); return; }
     else if (act === 'notesave') {
@@ -2534,7 +2571,7 @@
         id: String(t.id),
         title: String(t.title),
         owner: t.owner ? String(t.owner) : '',
-        prio: (t.prio === 'A' || t.prio === 'B' || t.prio === 'C') ? t.prio : 'B',
+        prio: normPrio(t.prio),
         rid: t.rid || null,
         on: t.on || t.due || todayISO(),
         due: t.due || t.on || todayISO(),

@@ -142,8 +142,8 @@ cat <<EOF
                 android:layout_width="54dp" android:layout_height="wrap_content"
                 android:paddingTop="9dp" android:paddingBottom="9dp"
                 android:gravity="center"
-                android:textColor="#B3261E" android:textSize="16sp" android:textStyle="bold"
-                android:text="A" />
+                android:textColor="#B3261E" android:textSize="14sp" android:textStyle="bold"
+                android:text="A0" />
             <TextView android:id="@+id/w_t$1"
                 android:layout_width="0dp" android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -257,10 +257,21 @@ public class DoListWidget extends AppWidgetProvider {
         }
     }
 
+    /** A0 이 가장 앞, C2 가 가장 뒤 */
     private static int prioRank(String p) {
-        if ("A".equals(p)) return 0;
-        if ("B".equals(p)) return 1;
-        return 2;
+        if (p == null || p.length() == 0) return 3;
+        char c = p.charAt(0);
+        int band = (c == 'A') ? 0 : (c == 'B') ? 1 : (c == 'C') ? 2 : 1;
+        int n = 0;
+        if (p.length() > 1) {
+            char d = p.charAt(1);
+            if (d >= '0' && d <= '2') n = d - '0';
+        }
+        return band * 3 + n;
+    }
+
+    private static boolean isTop(String p) {
+        return p != null && p.length() > 0 && p.charAt(0) == 'A';
     }
 
     /* ---------- 화면 채우기 ---------- */
@@ -271,7 +282,7 @@ public class DoListWidget extends AppWidgetProvider {
         for (int i = 0; i < row.length && i < items.size(); i++) {
             Item it = items.get(i);
             v.setTextViewText(prio[i], it.prio);
-            v.setTextColor(prio[i], "A".equals(it.prio) ? 0xFFB3261E : 0xFF5A626E);
+            v.setTextColor(prio[i], isTop(it.prio) ? 0xFFB3261E : 0xFF5A626E);
             v.setTextViewText(title[i], it.title);
             v.setTextViewText(date[i], it.label);
             v.setViewVisibility(row[i], View.VISIBLE);
