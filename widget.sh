@@ -33,6 +33,15 @@ cat > "$RES/drawable/w_div_v.xml" <<'EOF'
 </shape>
 EOF
 
+cat > "$RES/drawable/w_btn.xml" <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FFFFFF" />
+    <corners android:radius="9dp" />
+    <stroke android:width="1dp" android:color="#D6DAE0" />
+</shape>
+EOF
+
 # ---------- 위젯 레이아웃 ----------
 {
 cat <<'EOF'
@@ -45,10 +54,23 @@ cat <<'EOF'
     android:background="@drawable/widget_bg"
     android:padding="12dp">
 
-    <TextView android:id="@+id/w_head"
+    <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:textColor="#14171C" android:textSize="17sp" android:textStyle="bold"
-        android:text="오늘 할 일" android:maxLines="1" android:ellipsize="end" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView android:id="@+id/w_head"
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#14171C" android:textSize="17sp" android:textStyle="bold"
+            android:text="오늘 할 일" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/w_refresh"
+            android:layout_width="38dp" android:layout_height="34dp"
+            android:layout_marginStart="8dp"
+            android:gravity="center"
+            android:background="@drawable/w_btn"
+            android:textColor="#5A626E" android:textSize="17sp"
+            android:text="&#8635;" />
+    </LinearLayout>
 
     <TextView android:id="@+id/w_sub"
         android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -251,6 +273,14 @@ public class DoListWidget extends AppWidgetProvider {
         v.setViewVisibility(R.id.w_band_a, View.VISIBLE);
         v.setViewVisibility(R.id.w_band_b, b == 0 ? View.GONE : View.VISIBLE);
         v.setViewVisibility(R.id.w_empty, View.GONE);
+
+        // 우측 상단 새로고침: 위젯 자신에게 갱신 신호를 보낸다
+        Intent refresh = new Intent(ctx, DoListWidget.class);
+        refresh.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        refresh.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, new int[]{ widgetId });
+        v.setOnClickPendingIntent(R.id.w_refresh, PendingIntent.getBroadcast(
+            ctx, widgetId, refresh,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
 
         Intent open = new Intent(ctx, MainActivity.class);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
