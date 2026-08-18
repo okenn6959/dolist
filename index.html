@@ -278,6 +278,87 @@
   }
   .tp-routine-msg.on { display: block; }
 
+  .tp-owners { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; }
+  .tp-owners button {
+    flex: 0 0 auto;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 7px 13px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tp-owners button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .tp-stat-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .tp-stat-card h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .tp-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .tp-stat-grid div { text-align: center; }
+  .tp-stat-grid b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .tp-stat-grid span {
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .tp-stat-grid .c-done b { color: var(--done); }
+  .tp-stat-grid .c-post b { color: #8A5A12; }
+  .tp-stat-grid .c-canc b { color: var(--ink-faint); }
+  .tp-stat-grid .c-dele b { color: #4A5AA8; }
+  .tp-lag { list-style: none; margin: 0; padding: 0; }
+  .tp-lag li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--ink);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .tp-lag li:last-child { border-bottom: 0; }
+  .tp-lag em {
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--stamp);
+    white-space: nowrap;
+  }
+  .tp-stat-none { margin: 0; font-size: 13px; color: var(--ink-soft); }
+  .tp-seg-period { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tp-seg-period button {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .tp-seg-period button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .tp-wrap.on-page > .tp-owners { display: none !important; }
+
   .tp-tabs { display: flex; gap: 15px; border-bottom: 1px solid var(--line); margin: 20px 0 4px; }
   .tp-tab {
     background: none;
@@ -904,6 +985,8 @@
     <button class="tp-del-edit" id="tp-del">이 할 일 삭제</button>
   </div>
 
+  <div class="tp-owners" id="tp-owners"></div>
+
   <nav class="tp-tabs" role="tablist">
     <button class="tp-tab" role="tab" data-tab="day" aria-selected="true">날짜<span class="n" id="n-day"></span></button>
     <button class="tp-tab" role="tab" data-tab="cal" aria-selected="false">달력</button>
@@ -916,6 +999,7 @@
 
   <div class="tp-foot">
     <button id="tp-openlist">날짜별 목록</button>
+    <button id="tp-openstats">처리 이력</button>
     <button id="tp-copy">오늘 목록 복사</button>
     <button id="tp-backup">백업 복사</button>
     <button id="tp-restore">복구</button>
@@ -939,7 +1023,7 @@
 (function () {
   var KEY = 'dolist.tasks.v1';
   var OWNER = 'dolist.owner';
-  var state = { tasks: [], closeOpen: null, postponeOpen: null, page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null, editId: null };
+  var state = { tasks: [], owner: null, period: 'week', closeOpen: null, postponeOpen: null, page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'A', noteOpen: null, editId: null };
 
   var el = function (id) { return document.getElementById(id); };
   var banner = el('tp-banner');
@@ -1120,7 +1204,7 @@
           id: 't' + Date.now() + Math.floor(Math.random() * 900 + 100) + made,
           title: r.title, owner: r.owner || '', prio: r.prio || 'B',
           on: d, due: d, remind: r.remind || null,
-          rid: r.id, progress: 0, notes: [], done: false, createdAt: Date.now(),
+          rid: r.id, progress: 0, notes: [], done: false, createdAt: Date.now(), seq: Date.now(),
           nid: nextNid()
         });
         made++;
@@ -1180,6 +1264,7 @@
     state.tasks.forEach(function (t) {
       if (!t.on) { t.on = t.due || todayISO(); moved++; }
       if (!t.due) t.due = t.on;
+      if (!t.seq) { t.seq = t.createdAt || Date.now(); moved++; }
     });
     if (moved) { try { localStorage.setItem(KEY, JSON.stringify(state.tasks)); } catch (e) {} }
 
@@ -1232,19 +1317,30 @@
       var assigned = false;
       var limitISO = addDaysISO(todayISO(), 45), scheduled = 0;
       state.tasks.forEach(function (t) {
-        if (scheduled >= 60) return;
+        if (scheduled >= 30) return;
         if (t.due && t.due > limitISO) return;
         scheduled++;
         if (t.done || !t.remind || !t.due) return;
         var at = new Date(t.due + 'T' + t.remind + ':00');
         if (isNaN(at.getTime()) || at.getTime() <= Date.now() + 10000) return;
         if (!t.nid) assigned = true;
+        var flatTitle = String(t.title || '').replace(/\s+/g, ' ').trim();
         list.push({
           id: nidFor(t),
-          title: '[' + t.prio + '] ' + t.title,
+          title: '[' + t.prio + '] ' + flatTitle,
           body: (t.owner ? t.owner + ' · ' : '') + '알림 ' + fmtDue(t.due),
           schedule: { at: at, allowWhileIdle: true }
         });
+        // 30분 뒤 한 번 더
+        var again = new Date(at.getTime() + 30 * 60000);
+        if (again.getTime() > Date.now() + 10000) {
+          list.push({
+            id: nidFor(t) + 500000,
+            title: '다시 알림 · [' + t.prio + '] ' + flatTitle,
+            body: '아직 처리하지 않았다면 지금 확인해 주세요',
+            schedule: { at: again, allowWhileIdle: true }
+          });
+        }
       });
 
       if (assigned) save();
@@ -1269,6 +1365,7 @@
       var la = a.on ? dayDiff(a.on) : 0, lb = b.on ? dayDiff(b.on) : 0;
       if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
       if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      if ((a.seq || 0) !== (b.seq || 0)) return (a.seq || 0) - (b.seq || 0);
       return (a.on || '9999').localeCompare(b.on || '9999');
     });
     return list;
@@ -1285,6 +1382,7 @@
     function flat(t) { return String(t.title || '').replace(/\s+/g, ' ').trim(); }
     function byPrio(a, b) {
       if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      if ((a.seq || 0) !== (b.seq || 0)) return (a.seq || 0) - (b.seq || 0);
       return (a.on || '9999').localeCompare(b.on || '9999');
     }
 
@@ -1326,6 +1424,10 @@
       }),
       next: nextList.slice(0, 4).map(function (t) {
         return { p: t.prio, t: flat(t), d: shortDate(t.on) };
+      }),
+      // 위젯이 스스로 오늘을 계산할 수 있도록 원본도 함께 보낸다
+      tasks: open.slice(0, 60).map(function (t) {
+        return { p: t.prio, t: flat(t), on: t.on || today, due: t.due || t.on || today };
       })
     };
 
@@ -1377,9 +1479,39 @@
       var la = lateDays(a), lb = lateDays(b);
       if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
       if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      if ((a.seq || 0) !== (b.seq || 0)) return (a.seq || 0) - (b.seq || 0);
       return (a.on || '9999').localeCompare(b.on || '9999');
     });
-    return list;
+    return byOwner(list);
+  }
+
+  function ownerList() {
+    var seen = {}, out = [];
+    state.tasks.forEach(function (t) {
+      if (t.done) return;
+      var o = (t.owner || '').trim();
+      if (!o || seen[o]) return;
+      seen[o] = true; out.push(o);
+    });
+    return out.sort();
+  }
+
+  function renderOwners() {
+    var box = el('tp-owners');
+    var list = ownerList();
+    if (list.length < 2) { box.innerHTML = ''; box.style.display = 'none'; return; }
+    box.style.display = '';
+    box.innerHTML = '<button data-own="" aria-pressed="' + (!state.owner) + '">전체</button>' +
+      list.map(function (o) {
+        return '<button data-own="' + esc(o) + '" aria-pressed="' +
+          (state.owner === o) + '">' + esc(o) + '</button>';
+      }).join('');
+  }
+
+  function byOwner(list) {
+    if (!state.owner) return list;
+    var o = state.owner;
+    return list.filter(function (t) { return (t.owner || '').trim() === o; });
   }
 
   function emptyCopy() {
@@ -1423,7 +1555,9 @@
         '<button data-act="del" data-id="' + t.id + '">삭제</button>'
       : '<button data-act="prog" data-id="' + t.id + '">진행 +25%</button>' +
         '<button data-act="note" data-id="' + t.id + '">메모</button>' +
-        '<button data-act="close" data-id="' + t.id + '">처리</button>';
+        '<button data-act="close" data-id="' + t.id + '">처리</button>' +
+        '<button data-act="up" data-id="' + t.id + '" aria-label="위로">\u25B2</button>' +
+        '<button data-act="down" data-id="' + t.id + '" aria-label="아래로">\u25BC</button>';
 
     var outcomeBox = '';
     if (state.closeOpen === t.id) {
@@ -1539,6 +1673,7 @@
       var la = lateDays(a), lb = lateDays(b);
       if (!a.done && (la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
       if (order[a.prio] !== order[b.prio]) return order[a.prio] - order[b.prio];
+      if ((a.seq || 0) !== (b.seq || 0)) return (a.seq || 0) - (b.seq || 0);
       return (a.on || '9999').localeCompare(b.on || '9999');
     });
   }
@@ -1552,6 +1687,24 @@
 
   function outcomeOf(t) { return OUTCOME[t.outcome] || OUTCOME.done; }
 
+  /** 같은 우선순위 묶음 안에서 순서를 옮긴다 */
+  function moveTask(t, dir) {
+    var list = state.page === 'list' ? pageList() : visible();
+    var same = function (x) {
+      return x.prio === t.prio && !!x.done === !!t.done &&
+        (lateDays(x) > 0) === (lateDays(t) > 0);
+    };
+    var group = list.filter(same);
+    var gi = group.indexOf(t);
+    if (gi < 0) return false;
+    var gj = gi + dir;
+    if (gj < 0 || gj >= group.length) return false;
+    group.splice(gi, 1);
+    group.splice(gj, 0, t);
+    group.forEach(function (x, k) { x.seq = k + 1; });
+    return true;
+  }
+
   function statusChip(t) {
     if (t.done) {
       var o = outcomeOf(t);
@@ -1562,7 +1715,80 @@
     return '<span class="tp-chip">대기</span>';
   }
 
+  function periodStart() {
+    var d = new Date(todayISO() + 'T00:00:00');
+    d.setDate(d.getDate() - (state.period === 'week' ? 6 : 29));
+    return dateToISO(d);
+  }
+
+  function renderStats() {
+    var from = periodStart(), today = todayISO();
+    var cnt = { done: 0, delegate: 0, cancel: 0, postpone: 0 };
+    var inRange = state.tasks.filter(function (t) {
+      if (!t.done || !t.doneAt) return false;
+      var d = dateToISO(new Date(t.doneAt));
+      return d >= from && d <= today;
+    });
+    inRange.forEach(function (t) {
+      var k = t.outcome || 'done';
+      if (cnt[k] === undefined) k = 'done';
+      cnt[k]++;
+    });
+
+    var lag = {};
+    state.tasks.forEach(function (t) {
+      if (t.outcome !== 'postpone' || !t.doneAt) return;
+      if (dateToISO(new Date(t.doneAt)) < from) return;
+      var key = String(t.title || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+      lag[key] = (lag[key] || 0) + 1;
+    });
+    var lagList = Object.keys(lag).map(function (k) { return { t: k, n: lag[k] }; })
+      .sort(function (a, b) { return b.n - a.n; }).slice(0, 5);
+
+    var lateNow = state.tasks.filter(function (t) { return lateDays(t) > 0; })
+      .sort(function (a, b) { return lateDays(b) - lateDays(a); }).slice(0, 5);
+
+    var label = state.period === 'week' ? '최근 7일' : '최근 30일';
+
+    el('tp-page-bar').className = 'tp-page-bar';
+    el('tp-page-bar').innerHTML =
+      '<button data-act="pagehome">\u2039 홈으로</button><strong>처리 이력</strong>';
+
+    var h = '<div class="tp-seg-period">' +
+      '<button data-pd="week" aria-pressed="' + (state.period === 'week') + '">최근 7일</button>' +
+      '<button data-pd="month" aria-pressed="' + (state.period === 'month') + '">최근 30일</button>' +
+      '</div>';
+
+    h += '<div class="tp-stat-card"><h3>' + label + ' 처리 결과 · 총 ' + inRange.length + '건</h3>' +
+      '<div class="tp-stat-grid">' +
+      '<div class="c-done"><b>' + cnt.done + '</b><span>완료</span></div>' +
+      '<div class="c-dele"><b>' + cnt.delegate + '</b><span>위임</span></div>' +
+      '<div class="c-canc"><b>' + cnt.cancel + '</b><span>취소</span></div>' +
+      '<div class="c-post"><b>' + cnt.postpone + '</b><span>지연</span></div>' +
+      '</div></div>';
+
+    h += '<div class="tp-stat-card"><h3>지금 지연 중</h3>' +
+      (lateNow.length
+        ? '<ul class="tp-lag">' + lateNow.map(function (t) {
+            return '<li><span>' + esc(String(t.title).split('\n')[0].slice(0, 30)) +
+              '</span><em>' + lateDays(t) + '일</em></li>';
+          }).join('') + '</ul>'
+        : '<p class="tp-stat-none">지연 중인 항목이 없습니다.</p>') +
+      '</div>';
+
+    h += '<div class="tp-stat-card"><h3>' + label + ' 자주 미뤄진 일</h3>' +
+      (lagList.length
+        ? '<ul class="tp-lag">' + lagList.map(function (x) {
+            return '<li><span>' + esc(x.t) + '</span><em>' + x.n + '회</em></li>';
+          }).join('') + '</ul>'
+        : '<p class="tp-stat-none">미뤄진 항목이 없습니다.</p>') +
+      '</div>';
+
+    el('tp-page-body').innerHTML = h;
+  }
+
   function renderPage() {
+    if (state.page === 'stats') { renderStats(); return; }
     var days = ['일', '월', '화', '수', '목', '금', '토'];
 
     if (state.page === 'edit') {
@@ -1618,6 +1844,7 @@
 
     if (state.page) { renderPage(); return; }
 
+    renderOwners();
     header();
     var isCal = state.tab === 'cal';
     el('tp-cal').className = 'tp-cal' + (isCal ? ' on' : '');
@@ -1699,7 +1926,7 @@
         localStorage.setItem('dolist.nid', String(n + 1));
         return n;
       })(),
-      progress: 0, notes: [], done: false, createdAt: Date.now()
+      progress: 0, notes: [], done: false, createdAt: Date.now(), seq: Date.now()
     });
     var newTask = state.tasks[state.tasks.length - 1];
     var rule = formRule();
@@ -1941,6 +2168,8 @@
       state.calMonth = state.date.slice(0, 7);
       syncTabs(); render(); return;
     }
+    if (b.dataset.own !== undefined) { state.owner = b.dataset.own || null; render(); return; }
+    if (b.dataset.pd) { state.period = b.dataset.pd; render(); return; }
     if (b.dataset.date) {
       state.date = b.dataset.date;
       state.tab = 'day';
@@ -1958,6 +2187,10 @@
     if (!act || (b.dataset.id && !t)) return;
 
     if (act === 'edit') { openForm(t, state.page === 'list' ? 'list' : 'main'); render(); return; }
+    if (act === 'up' || act === 'down') {
+      if (moveTask(t, act === 'up' ? -1 : 1)) { render(); save(); }
+      return;
+    }
     if (act === 'step') {
       if (t.done) {
         t.done = false; t.doneAt = null; t.outcome = null; t.progress = 0;
@@ -2012,7 +2245,7 @@
         on: nd, due: nd, remind: t.remind,
         rid: null, progress: t.progress || 0,
         notes: (t.notes || []).slice(),
-        done: false, outcome: null, createdAt: Date.now(), nid: nextNid()
+        done: false, outcome: null, createdAt: Date.now(), seq: Date.now(), nid: nextNid()
       });
       state.postponeOpen = null;
       state.date = nd;
@@ -2211,6 +2444,52 @@
     }
   }
 
+  var AUTOKEY = 'dolist.autoBackup';
+
+  /** 하루 한 번 조용히 파일로 백업하고 최근 7개만 남긴다 */
+  async function autoBackup() {
+    var FS = plug('Filesystem');
+    if (!FS || !FS.writeFile) return;
+    if (!state.tasks.length) return;
+
+    var today = todayISO();
+    var last = '';
+    try { last = localStorage.getItem(AUTOKEY) || ''; } catch (e) {}
+    if (last === today) return;
+
+    var name = 'dolist-auto-' + today.replace(/-/g, '') + '.json';
+    var dirs = ['DOCUMENTS', 'EXTERNAL'];
+    var savedDir = null;
+
+    for (var i = 0; i < dirs.length; i++) {
+      try {
+        await FS.writeFile({
+          path: name, data: JSON.stringify(state.tasks),
+          directory: dirs[i], encoding: 'utf8', recursive: true
+        });
+        savedDir = dirs[i];
+        break;
+      } catch (e) {}
+    }
+    if (!savedDir) return;
+
+    try { localStorage.setItem(AUTOKEY, today); } catch (e) {}
+
+    // 오래된 자동 백업 정리 (최근 7개 유지)
+    try {
+      var ls = await FS.readdir({ path: '', directory: savedDir });
+      var files = (ls.files || []).map(function (f) {
+        return typeof f === 'string' ? f : (f.name || '');
+      }).filter(function (n) {
+        return /^dolist-auto-\d{8}\.json$/.test(n);
+      }).sort();
+      while (files.length > 7) {
+        var old = files.shift();
+        try { await FS.deleteFile({ path: old, directory: savedDir }); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
   async function openBackup(mode) {
     el('tp-bk').classList.add('on');
     el('tp-bk-input').value = '';
@@ -2230,9 +2509,12 @@
       el('tp-bk-res').innerHTML = lb
         ? '<b>백업 파일 위치</b><br>' + esc(lb.name) + '<br>' + esc(lb.where) +
           '<br>메일이나 드라이브로 보낸 파일도 선택할 수 있습니다.'
-        : '<b>백업 파일 위치</b><br>이 앱에서 백업한 기록이 없습니다.<br>' +
-          '보관해 둔 dolist-backup-…json 파일을 선택해 주세요.';
+        : '<b>백업 파일 위치</b><br>직접 만든 백업 기록이 없습니다.<br>' +
+          '자동 백업(dolist-auto-…json)이나 보관해 둔 파일을 선택해 주세요.';
+      var auto = '';
+      try { auto = localStorage.getItem(AUTOKEY) || ''; } catch (e) {}
       el('tp-bk-note').textContent =
+        (auto ? '자동 백업 최근 실행 ' + auto + ' · 최근 7개 보관 중. ' : '') +
         '통합 복구는 현재 목록을 두고 없는 항목만 더합니다. 교체 복구는 현재 목록을 백업 내용으로 바꿉니다.';
     }
     el('tp-bk').scrollIntoView({ block: 'nearest' });
@@ -2262,6 +2544,7 @@
         done: !!t.done,
         outcome: t.outcome || (t.done ? 'done' : null),
         doneAt: t.doneAt || null,
+        seq: Number(t.seq) || Number(t.createdAt) || Date.now(),
         nid: Number(t.nid) || 0,
         createdAt: t.createdAt || Date.now()
       };
@@ -2337,6 +2620,11 @@
     render();
   });
 
+  el('tp-openstats').addEventListener('click', function () {
+    state.page = 'stats';
+    render();
+  });
+
   attachSwipe(document.querySelector('.tp-wrap > header'),
     function () { return !state.page && state.tab === 'day'; });
   attachSwipe(el('tp-page-bar'), function () { return state.page === 'list'; });
@@ -2379,6 +2667,7 @@
   render();
   mirrorWidget();
   checkOpenView();
+  autoBackup();
   maybeAskPermission();
   if (NATIVE) syncNotifications();
 })();

@@ -201,6 +201,12 @@ import android.widget.RemoteViews;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 public class DoListWidget extends AppWidgetProvider {
 
     private static final int[] ROW_A = {R.id.w_ra1, R.id.w_ra2, R.id.w_ra3, R.id.w_ra4};
@@ -213,29 +219,83 @@ public class DoListWidget extends AppWidgetProvider {
     private static final int[] TITLE_B = {R.id.w_tb1, R.id.w_tb2, R.id.w_tb3, R.id.w_tb4};
     private static final int[] DATE_B = {R.id.w_mb1, R.id.w_mb2, R.id.w_mb3, R.id.w_mb4};
 
+    private static final String[] DOW = {"일", "월", "화", "수", "목", "금", "토"};
+
+    /** 한 줄 분량의 할 일 */
+    private static class Item {
+        String prio = "B", title = "", on = "", due = "", label = "";
+        int lateDays = 0, aheadDays = 0;
+    }
+
     @Override
     public void onUpdate(Context ctx, AppWidgetManager mgr, int[] ids) {
         for (int id : ids) render(ctx, mgr, id);
     }
 
-    private int fill(RemoteViews v, JSONArray items, int[] row, int[] prio, int[] title, int[] date) {
+    /* ---------- 날짜 계산 (기기의 현재 날짜 기준) ---------- */
+
+    private static long jdn(int y, int m, int d) {
+        long a = (14 - m) / 12, yy = y + 4800 - a, mm = m + 12 * a - 3;
+        return d + (153 * mm + 2) / 5 + 365 * yy + yy / 4 - yy / 100 + yy / 400 - 32045;
+    }
+
+    private static long jdnOf(String iso) {
+        try {
+            String[] p = iso.split("-");
+            return jdn(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private static String shortDate(String iso) {
+        try {
+            String[] p = iso.split("-");
+            return Integer.parseInt(p[1]) + "/" + Integer.parseInt(p[2]);
+        } catch (Exception e) {
+            return iso;
+        }
+    }
+
+    private static int prioRank(String p) {
+        if ("A".equals(p)) return 0;
+        if ("B".equals(p)) return 1;
+        return 2;
+    }
+
+    /* ---------- 화면 채우기 ---------- */
+
+    private int fillRows(RemoteViews v, List<Item> items,
+                         int[] row, int[] prio, int[] title, int[] date) {
         int shown = 0;
-        if (items != null) {
-            for (int i = 0; i < row.length && i < items.length(); i++) {
-                try {
-                    JSONObject it = items.getJSONObject(i);
-                    String p = it.optString("p", "B");
-                    v.setTextViewText(prio[i], p);
-                    v.setTextColor(prio[i], "A".equals(p) ? 0xFFB3261E : 0xFF5A626E);
-                    v.setTextViewText(title[i], it.optString("t", ""));
-                    v.setTextViewText(date[i], it.optString("d", ""));
-                    v.setViewVisibility(row[i], View.VISIBLE);
-                    shown++;
-                } catch (Exception ignored) { }
-            }
+        for (int i = 0; i < row.length && i < items.size(); i++) {
+            Item it = items.get(i);
+            v.setTextViewText(prio[i], it.prio);
+            v.setTextColor(prio[i], "A".equals(it.prio) ? 0xFFB3261E : 0xFF5A626E);
+            v.setTextViewText(title[i], it.title);
+            v.setTextViewText(date[i], it.label);
+            v.setViewVisibility(row[i], View.VISIBLE);
+            shown++;
         }
         for (int i = shown; i < row.length; i++) v.setViewVisibility(row[i], View.GONE);
         return shown;
+    }
+
+    /** 예전 형식(앱이 미리 나눠 보낸 목록)도 계속 읽을 수 있게 한다 */
+    private List<Item> legacy(JSONArray arr) {
+        List<Item> out = new ArrayList<>();
+        if (arr == null) return out;
+        for (int i = 0; i < arr.length(); i++) {
+            try {
+                JSONObject o = arr.getJSONObject(i);
+                Item it = new Item();
+                it.prio = o.optString("p", "B");
+                it.title = o.optString("t", "");
+                it.label = o.optString("d", "");
+                out.add(it);
+            } catch (Exception ignored) { }
+        }
+        return out;
     }
 
     private void render(Context ctx, AppWidgetManager mgr, int widgetId) {
@@ -245,21 +305,81 @@ public class DoListWidget extends AppWidgetProvider {
         String raw = sp.getString("widget_today", "");
         if (raw == null || raw.length() < 3) raw = sp.getString("_cap_widget_today", "");
 
-        int a = 0, b = 0;
+        Calendar cal = Calendar.getInstance();
+        int ty = cal.get(Calendar.YEAR), tm = cal.get(Calendar.MONTH) + 1, td = cal.get(Calendar.DAY_OF_MONTH);
+        long todayJ = jdn(ty, tm, td);
+        String head = tm + "월 " + td + "일 " + DOW[cal.get(Calendar.DAY_OF_WEEK) - 1] + "요일";
+
+        List<Item> todayList = new ArrayList<>();
+        List<Item> nextList = new ArrayList<>();
+        String sub = "";
+
         try {
             if (raw != null && raw.length() > 2) {
                 JSONObject o = new JSONObject(raw);
-                v.setTextViewText(R.id.w_head, o.optString("head", "오늘 할 일"));
-                v.setTextViewText(R.id.w_sub, o.optString("sub", ""));
-                a = fill(v, o.optJSONArray("today"), ROW_A, PRIO_A, TITLE_A, DATE_A);
-                b = fill(v, o.optJSONArray("next"), ROW_B, PRIO_B, TITLE_B, DATE_B);
-            } else {
-                fill(v, null, ROW_A, PRIO_A, TITLE_A, DATE_A);
-                fill(v, null, ROW_B, PRIO_B, TITLE_B, DATE_B);
+                JSONArray tasks = o.optJSONArray("tasks");
+
+                if (tasks != null) {
+                    // 위젯이 직접 오늘을 계산한다
+                    int late = 0;
+                    for (int i = 0; i < tasks.length(); i++) {
+                        JSONObject t = tasks.getJSONObject(i);
+                        Item it = new Item();
+                        it.prio = t.optString("p", "B");
+                        it.title = t.optString("t", "");
+                        it.on = t.optString("on", "");
+                        it.due = t.optString("due", it.on);
+
+                        long onJ = jdnOf(it.on);
+                        if (onJ == 0) continue;
+                        long dueJ = jdnOf(it.due);
+                        it.lateDays = dueJ > 0 ? (int) (todayJ - dueJ) : 0;
+                        it.aheadDays = (int) (onJ - todayJ);
+
+                        if (it.aheadDays <= 0) {
+                            it.label = it.lateDays > 0 ? it.lateDays + "일 지연" : "오늘";
+                            if (it.lateDays > 0) late++;
+                            todayList.add(it);
+                        } else if (it.aheadDays <= 7) {
+                            it.label = shortDate(it.on);
+                            nextList.add(it);
+                        }
+                    }
+
+                    Collections.sort(todayList, new Comparator<Item>() {
+                        public int compare(Item a, Item b) {
+                            boolean la = a.lateDays > 0, lb = b.lateDays > 0;
+                            if (la != lb) return la ? -1 : 1;
+                            int r = prioRank(a.prio) - prioRank(b.prio);
+                            return r != 0 ? r : a.on.compareTo(b.on);
+                        }
+                    });
+                    Collections.sort(nextList, new Comparator<Item>() {
+                        public int compare(Item a, Item b) {
+                            int r = a.on.compareTo(b.on);
+                            return r != 0 ? r : prioRank(a.prio) - prioRank(b.prio);
+                        }
+                    });
+
+                    sub = "오늘 " + todayList.size() + "건 · 차주 " + nextList.size() + "건"
+                        + (late > 0 ? " · 지연 " + late : "");
+                } else {
+                    // 예전 형식
+                    todayList = legacy(o.optJSONArray("today"));
+                    nextList = legacy(o.optJSONArray("next"));
+                    head = o.optString("head", head);
+                    sub = o.optString("sub", "");
+                }
             }
         } catch (Exception e) {
-            v.setTextViewText(R.id.w_sub, "목록을 읽지 못했습니다");
+            sub = "목록을 읽지 못했습니다";
         }
+
+        v.setTextViewText(R.id.w_head, head);
+        v.setTextViewText(R.id.w_sub, sub);
+
+        int a = fillRows(v, todayList, ROW_A, PRIO_A, TITLE_A, DATE_A);
+        int b = fillRows(v, nextList, ROW_B, PRIO_B, TITLE_B, DATE_B);
 
         // 오늘 업무가 없어도 표의 한 칸은 빈칸으로 남긴다
         if (a == 0) {
@@ -274,18 +394,18 @@ public class DoListWidget extends AppWidgetProvider {
         v.setViewVisibility(R.id.w_band_b, b == 0 ? View.GONE : View.VISIBLE);
         v.setViewVisibility(R.id.w_empty, View.GONE);
 
-        // 우측 상단 새로고침: 위젯 자신에게 갱신 신호를 보낸다
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
+
+        // 우측 상단 새로고침
         Intent refresh = new Intent(ctx, DoListWidget.class);
         refresh.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
         refresh.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, new int[]{ widgetId });
-        v.setOnClickPendingIntent(R.id.w_refresh, PendingIntent.getBroadcast(
-            ctx, widgetId, refresh,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        v.setOnClickPendingIntent(R.id.w_refresh,
+            PendingIntent.getBroadcast(ctx, widgetId, refresh, flags));
 
         Intent open = new Intent(ctx, MainActivity.class);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         open.putExtra("open_view", "list");
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         v.setOnClickPendingIntent(R.id.w_root, PendingIntent.getActivity(ctx, 0, open, flags));
 
         mgr.updateAppWidget(widgetId, v);
