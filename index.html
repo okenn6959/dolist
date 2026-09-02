@@ -218,6 +218,16 @@
   .tp-del-edit.on { display: block; }
 
   .tp-rep-box { display: none; margin-bottom: 11px; }
+  .tp-rep-box input[type="date"] {
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 11px;
+  }
   .tp-rep-box.on { display: block; }
   .tp-inline {
     display: flex;
@@ -991,7 +1001,7 @@
     </div>
 
     <div class="tp-field">
-      <label class="tp-label">알림 날짜 · 시각 · 시각을 비우면 알림 없음</label>
+      <label class="tp-label">알림 날짜 · 시각 · 비우면 알림 없음</label>
       <div class="tp-row2">
         <input type="date" id="tp-due">
         <input type="time" id="tp-remind">
@@ -1066,6 +1076,11 @@
           <option value="6">토요일</option>
         </select>
       </div>
+    </div>
+
+    <div class="tp-rep-box" id="tp-rep-until">
+      <label class="tp-label" for="tp-ru">반복 종료일 · 비우면 계속</label>
+      <input type="date" id="tp-ru">
     </div>
 
     <p class="tp-rep-note" id="tp-rep-note"></p>
@@ -1213,7 +1228,9 @@
   function occurrences(r, fromISO, toISO, cap) {
     var out = [], guard = 0;
     cap = cap || GEN_CAP;
-    if (!r || !r.start || fromISO > toISO) return out;
+    if (!r) return out;
+    if (r.until && r.until < toISO) toISO = r.until;
+    if (!r.start || fromISO > toISO) return out;
 
     if (r.freq === 'day') {
       var n = Math.max(1, Number(r.n) || 1);
@@ -1258,20 +1275,24 @@
     return out;
   }
 
+  function untilText(r) {
+    return r && r.until ? ' · ' + fmtDue(r.until) + '까지' : '';
+  }
+
   function ruleText(r) {
     if (!r || r.freq === 'none') return '';
     var n = Math.max(1, Number(r.n) || 1);
-    if (r.freq === 'day') return n === 1 ? '매일' : n + '일마다';
+    if (r.freq === 'day') return (n === 1 ? '매일' : n + '일마다') + untilText(r);
     if (r.freq === 'week') {
       var wd = (r.weekdays || []).slice().sort().map(function (i) { return DOW[i]; }).join('·');
-      return (n === 1 ? '매주' : n + '주마다') + (wd ? ' ' + wd : '');
+      return (n === 1 ? '매주' : n + '주마다') + (wd ? ' ' + wd : '') + untilText(r);
     }
     var per = n === 1 ? '매월' : n + '개월마다';
     if (r.monthMode === 'nth') {
       var idx = ['', '첫째', '둘째', '셋째', '넷째', '마지막'][Math.min(5, Number(r.nth) || 1)];
-      return per + ' ' + idx + ' ' + DOW[Number(r.nwd) || 0] + '요일';
+      return per + ' ' + idx + ' ' + DOW[Number(r.nwd) || 0] + '요일' + untilText(r);
     }
-    return per + ' ' + (Number(r.monthDay) || 1) + '일';
+    return per + ' ' + (Number(r.monthDay) || 1) + '일' + untilText(r);
   }
 
   function loadRules() {
@@ -1303,9 +1324,10 @@
     rules.forEach(function (r) {
       if (!r.active) return;
       var from = r.lastGen ? addDaysISO(r.lastGen, 1) : r.start;
-      if (from > to) return;
+      var limit = (r.until && r.until < to) ? r.until : to;
+      if (from > limit) return;
 
-      var dates = occurrences(r, from, to);
+      var dates = occurrences(r, from, limit);
       var seen = {};
       state.tasks.forEach(function (t) { if (t.rid === r.id) seen[t.on] = true; });
 
@@ -1321,7 +1343,7 @@
         made++;
       });
 
-      r.lastGen = to;
+      r.lastGen = limit;
     });
 
     if (made) { saveRules(); save(); }
@@ -1374,7 +1396,7 @@
     var moved = 0;
     state.tasks.forEach(function (t) {
       if (!t.on) { t.on = t.due || todayISO(); moved++; }
-      if (!t.due) t.due = t.on;
+      if (!t.due) t.due = null;   // 알림 날짜는 비어 있을 수 있다
       if (!t.seq) { t.seq = t.createdAt || Date.now(); moved++; }
       var np = normPrio(t.prio);
       if (np !== t.prio) { t.prio = np; moved++; }
@@ -1524,7 +1546,7 @@
 
     var payload = {
       head: (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + days[d.getDay()] + '요일',
-      sub: '오늘 ' + todayList.length + '건 · 차주 ' + nextList.length + '건' +
+      sub: '오늘 ' + todayList.length + '건 · 내일 이후 ' + nextList.length + '건' +
         (late ? ' · 지연 ' + late : ''),
       today: todayList.slice(0, 4).map(function (t) {
         return {
@@ -1537,8 +1559,8 @@
         return { p: t.prio, t: flat(t), d: shortDate(t.on) };
       }),
       // 위젯이 스스로 오늘을 계산할 수 있도록 원본도 함께 보낸다
-      tasks: open.slice(0, 60).map(function (t) {
-        return { p: t.prio, t: flat(t), on: t.on || today, due: t.due || t.on || today };
+      tasks: open.slice(0, 80).map(function (t) {
+        return { p: t.prio, t: flat(t), on: t.on || today, due: t.due || '' };
       })
     };
 
@@ -1665,7 +1687,8 @@
     var acts = t.done
       ? '<button data-act="undo" data-id="' + t.id + '">되돌리기</button>' +
         '<button data-act="del" data-id="' + t.id + '">삭제</button>'
-      : '<button data-act="prog" data-id="' + t.id + '">진행 +25%</button>' +
+      : '<button data-act="prog" data-id="' + t.id + '">' +
+        ((t.progress || 0) >= 100 ? '완료 처리' : '진행 +25%') + '</button>' +
         '<button data-act="note" data-id="' + t.id + '">메모</button>' +
         '<button data-act="close" data-id="' + t.id + '">처리</button>';
 
@@ -1885,9 +1908,8 @@
     if (t.done) {
       h += '<button data-act="undo" data-id="' + t.id + '">되돌리기</button>';
     } else {
-      if ((t.progress || 0) < 100) {
-        h += '<button data-act="prog" data-id="' + t.id + '">진행 +25%</button>';
-      }
+      h += '<button data-act="prog" data-id="' + t.id + '">' +
+        ((t.progress || 0) >= 100 ? '완료 처리' : '진행 +25%') + '</button>';
       h += '<button data-act="oc" data-o="done" data-id="' + t.id + '">완료</button>' +
         '<button data-act="oc" data-o="delegate" data-id="' + t.id + '">위임</button>' +
         '<button data-act="oc" data-o="cancel" data-id="' + t.id + '">취소</button>' +
@@ -1995,7 +2017,7 @@
         t.owner = owner;
         t.prio = state.prio;
         t.on = el('tp-on').value || state.date;
-        t.due = el('tp-due').value || t.on;
+        t.due = el('tp-due').value || null;
         t.remind = el('tp-remind').value || null;
         applyState(t, el('tp-state').value);
         state.date = t.on;
@@ -2037,7 +2059,7 @@
       id: 't' + Date.now() + Math.floor(Math.random() * 900 + 100),
       title: title, owner: owner, prio: state.prio,
       on: el('tp-on').value || state.date,
-      due: el('tp-due').value || el('tp-on').value || state.date,
+      due: el('tp-due').value || null,
       remind: el('tp-remind').value || null,
       nid: (function () {
         var n = Number(localStorage.getItem('dolist.nid') || '1');
@@ -2095,6 +2117,7 @@
     ['day', 'week', 'month'].forEach(function (k) {
       el('tp-rep-' + k).className = 'tp-rep-box' + (mode === k ? ' on' : '');
     });
+    el('tp-rep-until').className = 'tp-rep-box' + (mode === 'none' ? '' : ' on');
     repPreview();
   }
 
@@ -2120,6 +2143,8 @@
     if (mode === 'none') return null;
     var start = el('tp-on').value || state.date;
     var r = { freq: mode, start: start, active: true };
+    var until = el('tp-ru').value;
+    if (until) r.until = until;
     if (mode === 'day') r.n = Math.max(1, Number(el('tp-rd-n').value) || 1);
     else if (mode === 'week') {
       r.n = Math.max(1, Number(el('tp-rw-n').value) || 1);
@@ -2157,6 +2182,7 @@
     var wds = document.querySelectorAll('#tp-rw-dows input');
     wds.forEach(function (x) { x.checked = false; });
 
+    el('tp-ru').value = r && r.until ? r.until : '';
     if (!r) {
       el('tp-rd-n').value = 1;
       el('tp-rw-n').value = 1;
@@ -2244,8 +2270,8 @@
     } else {
       el('tp-title').value = '';
       el('tp-on').value = state.date;
-      el('tp-due').value = state.date;
-      el('tp-remind').value = '08:00';
+      el('tp-due').value = '';
+      el('tp-remind').value = '';
       el('tp-state').value = 'p0';
       el('tp-save').textContent = '목록에 넣기';
       el('tp-cancel').textContent = '닫기';
@@ -2340,7 +2366,14 @@
     if (act === 'pagehome') { state.page = null; state.tab = 'day'; syncTabs(); render(); return; }
     if (act === 'pagenew') { openForm(null, 'list'); render(); return; }
 
-    if (act === 'prog') { t.progress = Math.min(100, (t.progress || 0) + 25); }
+    if (act === 'prog') {
+      if ((t.progress || 0) >= 100) {
+        t.done = true; t.doneAt = Date.now(); t.outcome = 'done';
+        state.stepOpen = null;
+      } else {
+        t.progress = Math.min(100, (t.progress || 0) + 25);
+      }
+    }
     else if (act === 'note') { state.noteOpen = state.noteOpen === t.id ? null : t.id; render(); return; }
     else if (act === 'notesave') {
       var input = document.querySelector('[data-noteinput="' + t.id + '"]');
@@ -2425,7 +2458,7 @@
 
   el('tp-rw-dows').addEventListener('change', function () { syncDowLabels(); repPreview(); });
 
-  ['tp-rd-n', 'tp-rw-n', 'tp-rm-n', 'tp-rm-day', 'tp-rm-nthidx', 'tp-rm-nthwd', 'tp-on']
+  ['tp-rd-n', 'tp-rw-n', 'tp-rm-n', 'tp-rm-day', 'tp-rm-nthidx', 'tp-rm-nthwd', 'tp-on', 'tp-ru']
     .forEach(function (id) {
       el(id).addEventListener('change', repPreview);
     });

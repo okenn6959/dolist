@@ -117,20 +117,15 @@ cat <<'EOF'
         </LinearLayout>
 EOF
 
-band () {
+slot () {
 cat <<EOF
 
-        <TextView android:id="@+id/w_band_$1"
+        <TextView android:id="@+id/w_band$1"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:background="#ECEEF0"
             android:paddingStart="9dp" android:paddingTop="5dp" android:paddingBottom="5dp"
             android:textColor="#5A626E" android:textSize="12sp" android:textStyle="bold"
-            android:text="$2" android:visibility="gone" />
-EOF
-}
-
-row () {
-cat <<EOF
+            android:text="오늘" android:visibility="gone" />
 
         <LinearLayout android:id="@+id/w_r$1"
             android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -161,10 +156,7 @@ cat <<EOF
 EOF
 }
 
-band a "오늘"
-for i in a1 a2 a3 a4; do row $i; done
-band b "차주 예정"
-for i in b1 b2 b3 b4; do row $i; done
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do slot $i; done
 
 echo ""
 echo "    </LinearLayout>"
@@ -209,21 +201,34 @@ import java.util.List;
 
 public class DoListWidget extends AppWidgetProvider {
 
-    private static final int[] ROW_A = {R.id.w_ra1, R.id.w_ra2, R.id.w_ra3, R.id.w_ra4};
-    private static final int[] PRIO_A = {R.id.w_pa1, R.id.w_pa2, R.id.w_pa3, R.id.w_pa4};
-    private static final int[] TITLE_A = {R.id.w_ta1, R.id.w_ta2, R.id.w_ta3, R.id.w_ta4};
-    private static final int[] DATE_A = {R.id.w_ma1, R.id.w_ma2, R.id.w_ma3, R.id.w_ma4};
+    /** 표에 쓸 수 있는 줄 수 */
+    private static final int SLOTS = 12;
 
-    private static final int[] ROW_B = {R.id.w_rb1, R.id.w_rb2, R.id.w_rb3, R.id.w_rb4};
-    private static final int[] PRIO_B = {R.id.w_pb1, R.id.w_pb2, R.id.w_pb3, R.id.w_pb4};
-    private static final int[] TITLE_B = {R.id.w_tb1, R.id.w_tb2, R.id.w_tb3, R.id.w_tb4};
-    private static final int[] DATE_B = {R.id.w_mb1, R.id.w_mb2, R.id.w_mb3, R.id.w_mb4};
+    private static final int[] BAND = {
+        R.id.w_band1, R.id.w_band2, R.id.w_band3, R.id.w_band4, R.id.w_band5, R.id.w_band6,
+        R.id.w_band7, R.id.w_band8, R.id.w_band9, R.id.w_band10, R.id.w_band11, R.id.w_band12
+    };
+    private static final int[] ROW = {
+        R.id.w_r1, R.id.w_r2, R.id.w_r3, R.id.w_r4, R.id.w_r5, R.id.w_r6,
+        R.id.w_r7, R.id.w_r8, R.id.w_r9, R.id.w_r10, R.id.w_r11, R.id.w_r12
+    };
+    private static final int[] PRIO = {
+        R.id.w_p1, R.id.w_p2, R.id.w_p3, R.id.w_p4, R.id.w_p5, R.id.w_p6,
+        R.id.w_p7, R.id.w_p8, R.id.w_p9, R.id.w_p10, R.id.w_p11, R.id.w_p12
+    };
+    private static final int[] TITLE = {
+        R.id.w_t1, R.id.w_t2, R.id.w_t3, R.id.w_t4, R.id.w_t5, R.id.w_t6,
+        R.id.w_t7, R.id.w_t8, R.id.w_t9, R.id.w_t10, R.id.w_t11, R.id.w_t12
+    };
+    private static final int[] DATE = {
+        R.id.w_m1, R.id.w_m2, R.id.w_m3, R.id.w_m4, R.id.w_m5, R.id.w_m6,
+        R.id.w_m7, R.id.w_m8, R.id.w_m9, R.id.w_m10, R.id.w_m11, R.id.w_m12
+    };
 
     private static final String[] DOW = {"일", "월", "화", "수", "목", "금", "토"};
 
-    /** 한 줄 분량의 할 일 */
     private static class Item {
-        String prio = "B", title = "", on = "", due = "", label = "";
+        String prio = "B0", title = "", on = "", due = "", label = "";
         int lateDays = 0, aheadDays = 0;
     }
 
@@ -232,7 +237,7 @@ public class DoListWidget extends AppWidgetProvider {
         for (int id : ids) render(ctx, mgr, id);
     }
 
-    /* ---------- 날짜 계산 (기기의 현재 날짜 기준) ---------- */
+    /* ---------- 날짜 계산 ---------- */
 
     private static long jdn(int y, int m, int d) {
         long a = (14 - m) / 12, yy = y + 4800 - a, mm = m + 12 * a - 3;
@@ -242,6 +247,7 @@ public class DoListWidget extends AppWidgetProvider {
     private static long jdnOf(String iso) {
         try {
             String[] p = iso.split("-");
+            if (p.length < 3) return 0;
             return jdn(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
         } catch (Exception e) {
             return 0;
@@ -274,25 +280,6 @@ public class DoListWidget extends AppWidgetProvider {
         return p != null && p.length() > 0 && p.charAt(0) == 'A';
     }
 
-    /* ---------- 화면 채우기 ---------- */
-
-    private int fillRows(RemoteViews v, List<Item> items,
-                         int[] row, int[] prio, int[] title, int[] date) {
-        int shown = 0;
-        for (int i = 0; i < row.length && i < items.size(); i++) {
-            Item it = items.get(i);
-            v.setTextViewText(prio[i], it.prio);
-            v.setTextColor(prio[i], isTop(it.prio) ? 0xFFB3261E : 0xFF5A626E);
-            v.setTextViewText(title[i], it.title);
-            v.setTextViewText(date[i], it.label);
-            v.setViewVisibility(row[i], View.VISIBLE);
-            shown++;
-        }
-        for (int i = shown; i < row.length; i++) v.setViewVisibility(row[i], View.GONE);
-        return shown;
-    }
-
-    /** 예전 형식(앱이 미리 나눠 보낸 목록)도 계속 읽을 수 있게 한다 */
     private List<Item> legacy(JSONArray arr) {
         List<Item> out = new ArrayList<>();
         if (arr == null) return out;
@@ -300,7 +287,7 @@ public class DoListWidget extends AppWidgetProvider {
             try {
                 JSONObject o = arr.getJSONObject(i);
                 Item it = new Item();
-                it.prio = o.optString("p", "B");
+                it.prio = o.optString("p", "B0");
                 it.title = o.optString("t", "");
                 it.label = o.optString("d", "");
                 out.add(it);
@@ -331,20 +318,20 @@ public class DoListWidget extends AppWidgetProvider {
                 JSONArray tasks = o.optJSONArray("tasks");
 
                 if (tasks != null) {
-                    // 위젯이 직접 오늘을 계산한다
                     int late = 0;
                     for (int i = 0; i < tasks.length(); i++) {
                         JSONObject t = tasks.getJSONObject(i);
                         Item it = new Item();
-                        it.prio = t.optString("p", "B");
+                        it.prio = t.optString("p", "B0");
                         it.title = t.optString("t", "");
                         it.on = t.optString("on", "");
-                        it.due = t.optString("due", it.on);
+                        it.due = t.optString("due", "");
 
                         long onJ = jdnOf(it.on);
                         if (onJ == 0) continue;
                         long dueJ = jdnOf(it.due);
                         it.lateDays = dueJ > 0 ? (int) (todayJ - dueJ) : 0;
+                        if (it.lateDays < 0) it.lateDays = 0;
                         it.aheadDays = (int) (onJ - todayJ);
 
                         if (it.aheadDays <= 0) {
@@ -372,10 +359,9 @@ public class DoListWidget extends AppWidgetProvider {
                         }
                     });
 
-                    sub = "오늘 " + todayList.size() + "건 · 차주 " + nextList.size() + "건"
+                    sub = "오늘 " + todayList.size() + "건 · 내일 이후 " + nextList.size() + "건"
                         + (late > 0 ? " · 지연 " + late : "");
                 } else {
-                    // 예전 형식
                     todayList = legacy(o.optJSONArray("today"));
                     nextList = legacy(o.optJSONArray("next"));
                     head = o.optString("head", head);
@@ -389,25 +375,55 @@ public class DoListWidget extends AppWidgetProvider {
         v.setTextViewText(R.id.w_head, head);
         v.setTextViewText(R.id.w_sub, sub);
 
-        int a = fillRows(v, todayList, ROW_A, PRIO_A, TITLE_A, DATE_A);
-        int b = fillRows(v, nextList, ROW_B, PRIO_B, TITLE_B, DATE_B);
+        // 오늘 항목을 먼저 모두 채우고, 남는 줄에 내일 이후를 채운다
+        int slot = 0;
+        int todayShown = Math.min(todayList.size(), SLOTS);
+        for (int i = 0; i < todayShown; i++) {
+            Item it = todayList.get(i);
+            v.setTextViewText(BAND[slot], "오늘");
+            v.setViewVisibility(BAND[slot], i == 0 ? View.VISIBLE : View.GONE);
+            v.setTextViewText(PRIO[slot], it.prio);
+            v.setTextColor(PRIO[slot], isTop(it.prio) ? 0xFFB3261E : 0xFF5A626E);
+            v.setTextViewText(TITLE[slot], it.title);
+            v.setTextViewText(DATE[slot], it.label);
+            v.setViewVisibility(ROW[slot], View.VISIBLE);
+            slot++;
+        }
 
-        // 오늘 업무가 없어도 표의 한 칸은 빈칸으로 남긴다
-        if (a == 0) {
-            v.setTextViewText(PRIO_A[0], "");
-            v.setTextViewText(TITLE_A[0], " ");
-            v.setTextViewText(DATE_A[0], "");
-            v.setViewVisibility(ROW_A[0], View.VISIBLE);
+        // 오늘 할 일이 없어도 한 줄은 빈칸으로 남긴다
+        if (todayShown == 0 && slot < SLOTS) {
+            v.setTextViewText(BAND[slot], "오늘");
+            v.setViewVisibility(BAND[slot], View.VISIBLE);
+            v.setTextViewText(PRIO[slot], "");
+            v.setTextViewText(TITLE[slot], " ");
+            v.setTextViewText(DATE[slot], "");
+            v.setViewVisibility(ROW[slot], View.VISIBLE);
+            slot++;
+        }
+
+        int nextShown = Math.min(nextList.size(), SLOTS - slot);
+        for (int i = 0; i < nextShown; i++) {
+            Item it = nextList.get(i);
+            v.setTextViewText(BAND[slot], "내일 이후");
+            v.setViewVisibility(BAND[slot], i == 0 ? View.VISIBLE : View.GONE);
+            v.setTextViewText(PRIO[slot], it.prio);
+            v.setTextColor(PRIO[slot], isTop(it.prio) ? 0xFFB3261E : 0xFF5A626E);
+            v.setTextViewText(TITLE[slot], it.title);
+            v.setTextViewText(DATE[slot], it.label);
+            v.setViewVisibility(ROW[slot], View.VISIBLE);
+            slot++;
+        }
+
+        for (int i = slot; i < SLOTS; i++) {
+            v.setViewVisibility(ROW[i], View.GONE);
+            v.setViewVisibility(BAND[i], View.GONE);
         }
 
         v.setViewVisibility(R.id.w_thead, View.VISIBLE);
-        v.setViewVisibility(R.id.w_band_a, View.VISIBLE);
-        v.setViewVisibility(R.id.w_band_b, b == 0 ? View.GONE : View.VISIBLE);
         v.setViewVisibility(R.id.w_empty, View.GONE);
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 
-        // 우측 상단 새로고침
         Intent refresh = new Intent(ctx, DoListWidget.class);
         refresh.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
         refresh.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, new int[]{ widgetId });
