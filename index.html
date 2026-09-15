@@ -986,6 +986,15 @@
     </div>
   </div>
 
+  <div class="tp-modal" id="tp-exit">
+    <div class="tp-modal-card">
+      <h2>앱을 종료할까요?</h2>
+      <p>작성 중인 내용은 이미 저장되어 있습니다.</p>
+      <button class="prim" id="tp-exit-yes">예, 종료합니다</button>
+      <button class="sec" id="tp-exit-no">아니오, 계속 씁니다</button>
+    </div>
+  </div>
+
   <div class="tp-banner" id="tp-banner"></div>
 
   <header>
@@ -2931,6 +2940,66 @@
   });
 
   el('tp-prio').addEventListener('change', function () { state.prio = this.value; });
+
+  /* ---------- 뒤로가기 단계 처리 ---------- */
+
+  function isOn(id) { return el(id).classList.contains('on'); }
+
+  /** 한 단계 뒤로. 더 물러날 곳이 없으면 false */
+  function backStep() {
+    if (isOn('tp-exit')) { el('tp-exit').classList.remove('on'); return true; }
+    if (isOn('tp-modal')) { hidePermModal(); return true; }
+    if (isOn('tp-bk')) { el('tp-bk').classList.remove('on'); return true; }
+    if (isOn('tp-foot-more')) { el('tp-foot-more').className = 'tp-foot tp-fold'; return true; }
+
+    if (state.postponeOpen) { state.postponeOpen = null; render(); return true; }
+    if (state.noteOpen) { state.noteOpen = null; render(); return true; }
+    if (state.stepOpen || state.closeOpen) {
+      state.stepOpen = null; state.closeOpen = null; render(); return true;
+    }
+
+    if (isOn('tp-form')) { closeForm(); syncTabs(); render(); return true; }
+    if (state.page) { state.page = null; state.tab = 'day'; syncTabs(); render(); return true; }
+
+    if (state.tab !== 'day') { state.tab = 'day'; syncTabs(); render(); return true; }
+    if (state.date !== todayISO()) {
+      state.date = todayISO();
+      state.calMonth = state.date.slice(0, 7);
+      render();
+      return true;
+    }
+    if (state.owner) { state.owner = null; render(); return true; }
+    return false;
+  }
+
+  function showExit() { el('tp-exit').classList.add('on'); }
+
+  el('tp-exit-no').addEventListener('click', function () {
+    el('tp-exit').classList.remove('on');
+  });
+
+  el('tp-exit-yes').addEventListener('click', function () {
+    var ap = plug('App');
+    if (ap && ap.exitApp) ap.exitApp();
+    else el('tp-exit').classList.remove('on');
+  });
+
+  function handleBack() {
+    if (backStep()) return;
+    showExit();
+  }
+
+  (function () {
+    var ap = plug('App');
+    if (ap && ap.addListener) {
+      try { ap.addListener('backButton', handleBack); } catch (e) {}
+    }
+  })();
+
+  // PC 브라우저에서도 같은 동작 (Esc)
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { e.preventDefault(); handleBack(); }
+  });
 
   el('tp-t-owner').addEventListener('click', function () {
     setFold('owner', !state.showOwner);
