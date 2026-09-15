@@ -217,6 +217,39 @@
   }
   .tp-del-edit.on { display: block; }
 
+  .tp-toggles { display: flex; gap: 6px; margin-bottom: 11px; }
+  .tp-toggle {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 11px 0;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .tp-toggle[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .tp-fold { display: none; }
+  .tp-fold.on { display: block; }
+
+  .tp-scope { display: none; gap: 6px; margin-bottom: 11px; }
+  .tp-scope.on { display: flex; }
+  .tp-scope button {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 0;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .tp-scope button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
   .tp-rep-box { display: none; margin-bottom: 11px; }
   .tp-rep-box input[type="date"] {
     width: 100%;
@@ -1000,8 +1033,13 @@
       </div>
     </div>
 
-    <div class="tp-field">
-      <label class="tp-label">알림 날짜 · 시각 · 비우면 알림 없음</label>
+    <div class="tp-toggles">
+      <button type="button" class="tp-toggle" id="tp-t-alarm" aria-pressed="false">알림 설정</button>
+      <button type="button" class="tp-toggle" id="tp-t-rep" aria-pressed="false">반복 설정</button>
+    </div>
+
+    <div class="tp-field tp-fold" id="tp-fold-alarm">
+      <label class="tp-label">알림 날짜 · 시각</label>
       <div class="tp-row2">
         <input type="date" id="tp-due">
         <input type="time" id="tp-remind">
@@ -1022,7 +1060,7 @@
       </select>
     </div>
 
-    <div class="tp-field">
+    <div class="tp-field tp-fold" id="tp-fold-rep">
       <span class="tp-label">반복</span>
       <div class="tp-seg" id="tp-rep">
         <button type="button" data-r="none" aria-pressed="true">없음</button>
@@ -1084,7 +1122,12 @@
     </div>
 
     <p class="tp-rep-note" id="tp-rep-note"></p>
+
     <div class="tp-routine-msg" id="tp-routine-msg"></div>
+    <div class="tp-scope" id="tp-scope">
+      <button type="button" data-sc="one" aria-pressed="true">이 항목만</button>
+      <button type="button" data-sc="all" aria-pressed="false">이후 전체</button>
+    </div>
 
     <button class="tp-submit" id="tp-save">목록에 넣기</button>
     <button class="tp-cancel" id="tp-cancel">닫기</button>
@@ -1130,7 +1173,8 @@
 (function () {
   var KEY = 'dolist.tasks.v1';
   var OWNER = 'dolist.owner';
-  var state = { tasks: [], stepOpen: null, prioSort: false, owner: null, period: 'week', closeOpen: null, postponeOpen: null, page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'A0', noteOpen: null, editId: null };
+  var state = { tasks: [], stepOpen: null, prioSort: false, owner: null, period: 'week', closeOpen: null, postponeOpen: null, page: null, editFrom: 'main', tab: 'day', date: null, calMonth: null, prio: 'B0', noteOpen: null, editId: null,
+    scope: 'one', showAlarm: false, showRep: false };
 
   var el = function (id) { return document.getElementById(id); };
   var banner = el('tp-banner');
@@ -1273,6 +1317,13 @@
       }
     }
     return out;
+  }
+
+  /** 반복 일정 자체가 바뀌었는지 비교용 */
+  function schedSig(r) {
+    if (!r) return '';
+    return [r.freq, r.n, (r.weekdays || []).slice().sort().join(','),
+      r.monthMode || '', r.monthDay || '', r.nth || '', r.nwd || '', r.until || ''].join('|');
   }
 
   function untilText(r) {
@@ -1560,7 +1611,7 @@
       }),
       // 위젯이 스스로 오늘을 계산할 수 있도록 원본도 함께 보낸다
       tasks: open.slice(0, 80).map(function (t) {
-        return { p: t.prio, t: flat(t), on: t.on || today, due: t.due || '' };
+        return { p: t.prio, t: flat(t), on: t.on || today, due: t.due || '', r: t.rid ? 1 : 0 };
       })
     };
 
@@ -2020,6 +2071,28 @@
         t.due = el('tp-due').value || null;
         t.remind = el('tp-remind').value || null;
         applyState(t, el('tp-state').value);
+
+        // 반복 항목: 이후 전체 적용
+        if (t.rid && state.scope === 'all') {
+          var base = t.on, changed = 0;
+          state.tasks.forEach(function (x) {
+            if (x.rid !== t.rid || x.id === t.id) return;
+            if (x.done || x.on < base) return;
+            x.title = title;
+            x.owner = owner;
+            x.prio = state.prio;
+            x.remind = t.remind;
+            x.due = t.remind ? x.on : null;
+            changed++;
+          });
+          var rl = findRule(t.rid);
+          if (rl) {
+            rl.title = title; rl.owner = owner; rl.prio = state.prio; rl.remind = t.remind;
+            saveRules();
+          }
+          info('이후 ' + changed + '건에도 함께 적용했습니다');
+        }
+
         state.date = t.on;
         state.calMonth = state.date.slice(0, 7);
         state.tab = 'day';
@@ -2031,23 +2104,33 @@
           info('반복을 중단했습니다' + (gone ? ' · 예정 ' + gone + '건 정리' : ''));
         } else if (nr) {
           if (cur) {
-            var today0 = todayISO();
-            state.tasks = state.tasks.filter(function (x) {
-              return !(x.rid === cur.id && !x.done && x.on > today0);
-            });
-            nr.id = cur.id;
-            nr.title = title; nr.owner = owner; nr.prio = state.prio;
-            nr.remind = t.remind; nr.lastGen = null;
-            rules[rules.indexOf(cur)] = nr;
+            // 반복 일정 자체가 바뀐 경우에만 예정분을 다시 만든다
+            if (schedSig(nr) !== schedSig(cur)) {
+              var today0 = todayISO();
+              state.tasks = state.tasks.filter(function (x) {
+                return !(x.rid === cur.id && !x.done && x.on > today0);
+              });
+              var all = state.scope === 'all';
+              nr.id = cur.id;
+              nr.title = all ? title : cur.title;
+              nr.owner = all ? owner : cur.owner;
+              nr.prio = all ? state.prio : cur.prio;
+              nr.remind = all ? t.remind : cur.remind;
+              nr.lastGen = null;
+              rules[rules.indexOf(cur)] = nr;
+              saveRules();
+              var m = syncRules();
+              info(ruleText(nr) + ' 반복 설정 변경 · 예정 ' + m + '건 재생성');
+            }
           } else {
             nr.id = 'r' + Date.now() + Math.floor(Math.random() * 900 + 100);
             nr.title = title; nr.owner = owner; nr.prio = state.prio; nr.remind = t.remind;
             rules.push(nr);
             t.rid = nr.id;
+            saveRules();
+            var m2 = syncRules();
+            info(ruleText(nr) + ' 반복 설정 · 예정 ' + m2 + '건 생성');
           }
-          saveRules();
-          var m = syncRules();
-          info(ruleText(nr) + ' 반복 설정 · 예정 ' + m + '건 생성');
         }
       }
       closeForm();
@@ -2139,6 +2222,7 @@
 
   /** 폼 입력을 규칙 객체로 */
   function formRule() {
+    if (!state.showRep) return null;
     var mode = repMode();
     if (mode === 'none') return null;
     var start = el('tp-on').value || state.date;
@@ -2237,6 +2321,27 @@
     }
   }
 
+  function setFold(which, on) {
+    if (which === 'alarm') {
+      state.showAlarm = on;
+      el('tp-fold-alarm').className = 'tp-field tp-fold' + (on ? ' on' : '');
+      el('tp-t-alarm').setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (!on) { el('tp-due').value = ''; el('tp-remind').value = ''; }
+    } else {
+      state.showRep = on;
+      el('tp-fold-rep').className = 'tp-field tp-fold' + (on ? ' on' : '');
+      el('tp-t-rep').setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (!on) { setRepMode('none'); el('tp-rep-note').innerHTML = ''; }
+    }
+  }
+
+  function setScope(v) {
+    state.scope = v;
+    document.querySelectorAll('#tp-scope button').forEach(function (x) {
+      x.setAttribute('aria-pressed', x.dataset.sc === v ? 'true' : 'false');
+    });
+  }
+
   function syncPrio() {
     el('tp-prio').value = normPrio(state.prio);
   }
@@ -2252,19 +2357,23 @@
       el('tp-title').value = t.title;
       el('tp-owner').value = t.owner || '';
       el('tp-on').value = t.on || state.date;
-      el('tp-due').value = t.due || t.on || state.date;
+      el('tp-due').value = t.due || '';
       el('tp-remind').value = t.remind || '';
       el('tp-state').value = stateValue(t);
       state.prio = t.prio;
+      setFold('alarm', !!(t.due || t.remind));
       el('tp-save').textContent = '수정 저장';
       el('tp-cancel').textContent = '수정 취소';
       el('tp-del').className = 'tp-del-edit on';
       var rr = t.rid ? findRule(t.rid) : null;
+      setFold('rep', !!(rr && rr.active));
       fillRepForm(rr && rr.active ? rr : null);
       el('tp-routine-msg').className = 'tp-routine-msg' + (rr ? ' on' : '');
+      el('tp-scope').className = 'tp-scope' + (rr && rr.active ? ' on' : '');
+      setScope('one');
       if (rr) {
         el('tp-routine-msg').textContent = rr.active
-          ? '반복 항목입니다(' + ruleText(rr) + '). 제목·담당·우선순위 수정은 이 항목에만 적용되고, 반복 설정을 바꾸면 앞으로 만들어질 항목에 적용됩니다. 반복을 없음으로 바꾸면 아직 지나지 않은 항목이 정리됩니다.'
+          ? '반복 항목입니다(' + ruleText(rr) + '). 아래에서 수정 범위를 고르세요.'
           : '반복이 중단된 항목입니다. 다시 설정하면 앞으로의 항목이 만들어집니다.';
       }
     } else {
@@ -2273,10 +2382,15 @@
       el('tp-due').value = '';
       el('tp-remind').value = '';
       el('tp-state').value = 'p0';
+      state.prio = 'B0';
       el('tp-save').textContent = '목록에 넣기';
       el('tp-cancel').textContent = '닫기';
       el('tp-del').className = 'tp-del-edit';
       el('tp-routine-msg').className = 'tp-routine-msg';
+      el('tp-scope').className = 'tp-scope';
+      setScope('one');
+      setFold('alarm', false);
+      setFold('rep', false);
       fillRepForm(null);
     }
     syncPrio();
@@ -2337,6 +2451,7 @@
       state.calMonth = state.date.slice(0, 7);
       syncTabs(); render(); return;
     }
+    if (b.dataset.sc) { setScope(b.dataset.sc); return; }
     if (b.dataset.own !== undefined) { state.owner = b.dataset.own || null; render(); return; }
     if (b.dataset.pd) { state.period = b.dataset.pd; render(); return; }
     if (b.dataset.date) {
@@ -2796,6 +2911,19 @@
   });
 
   el('tp-prio').addEventListener('change', function () { state.prio = this.value; });
+
+  el('tp-t-alarm').addEventListener('click', function () {
+    setFold('alarm', !state.showAlarm);
+    if (state.showAlarm && !el('tp-due').value) {
+      el('tp-due').value = el('tp-on').value || state.date;
+      el('tp-remind').value = '08:00';
+    }
+  });
+
+  el('tp-t-rep').addEventListener('click', function () {
+    setFold('rep', !state.showRep);
+    if (state.showRep && repMode() === 'none') setRepMode('day');
+  });
 
   el('tp-openstats').addEventListener('click', function () {
     state.page = 'stats';

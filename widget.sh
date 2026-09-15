@@ -230,6 +230,7 @@ public class DoListWidget extends AppWidgetProvider {
     private static class Item {
         String prio = "B0", title = "", on = "", due = "", label = "";
         int lateDays = 0, aheadDays = 0;
+        boolean repeat = false;
     }
 
     @Override
@@ -326,6 +327,7 @@ public class DoListWidget extends AppWidgetProvider {
                         it.title = t.optString("t", "");
                         it.on = t.optString("on", "");
                         it.due = t.optString("due", "");
+                        it.repeat = t.optInt("r", 0) == 1;
 
                         long onJ = jdnOf(it.on);
                         if (onJ == 0) continue;
@@ -352,10 +354,12 @@ public class DoListWidget extends AppWidgetProvider {
                             return r != 0 ? r : a.on.compareTo(b.on);
                         }
                     });
+                    // 반복 업무는 맨 아래로, 그 위에서는 우선순위 순
                     Collections.sort(nextList, new Comparator<Item>() {
                         public int compare(Item a, Item b) {
-                            int r = a.on.compareTo(b.on);
-                            return r != 0 ? r : prioRank(a.prio) - prioRank(b.prio);
+                            if (a.repeat != b.repeat) return a.repeat ? 1 : -1;
+                            int r = prioRank(a.prio) - prioRank(b.prio);
+                            return r != 0 ? r : a.on.compareTo(b.on);
                         }
                     });
 
