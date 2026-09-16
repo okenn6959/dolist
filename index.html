@@ -2959,8 +2959,24 @@
     }
 
     if (isOn('tp-form')) { closeForm(); syncTabs(); render(); return true; }
-    if (state.page) { state.page = null; state.tab = 'day'; syncTabs(); render(); return true; }
 
+    // 처리 이력 → 홈 목록
+    if (state.page === 'stats') {
+      state.page = null; state.tab = 'day'; syncTabs(); render(); return true;
+    }
+
+    // 첫 화면(오늘자 날짜별 목록)이면 더 물러날 곳이 없다
+    if (state.page === 'list') {
+      if (state.date !== todayISO()) {
+        state.date = todayISO();
+        state.calMonth = state.date.slice(0, 7);
+        render();
+        return true;
+      }
+      return false;
+    }
+
+    // 홈 화면에서는 첫 화면으로 되돌아간다
     if (state.tab !== 'day') { state.tab = 'day'; syncTabs(); render(); return true; }
     if (state.date !== todayISO()) {
       state.date = todayISO();
@@ -2969,7 +2985,9 @@
       return true;
     }
     if (state.owner) { state.owner = null; render(); return true; }
-    return false;
+    state.page = 'list';
+    render();
+    return true;
   }
 
   function showExit() { el('tp-exit').classList.add('on'); }
@@ -3070,6 +3088,7 @@
 
   state.date = todayISO();
   state.calMonth = state.date.slice(0, 7);
+  state.page = 'list';          // 첫 화면은 오늘자 날짜별 목록
   try { state.prioSort = !!localStorage.getItem('dolist.prioSort'); } catch (e) {}
   el('tp-sort').setAttribute('aria-pressed', state.prioSort ? 'true' : 'false');
   load();
