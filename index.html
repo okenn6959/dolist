@@ -688,7 +688,18 @@
     color: var(--ink-soft);
     cursor: pointer;
   }
-  .tp-strip .mid { flex: 1; min-width: 0; text-align: center; }
+  .tp-strip .mid {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    background: none;
+    border: 0;
+    padding: 2px 0;
+    cursor: pointer;
+    font-family: var(--sans);
+    color: var(--ink);
+  }
+  .tp-strip .mid .big, .tp-strip .mid .rel { display: block; }
   .tp-strip .big { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
   .tp-strip .rel {
     font-family: var(--mono);
@@ -700,7 +711,8 @@
 
   .tp-swipe-hint {
     font-family: var(--mono);
-    font-size: 10.5px;
+    font-size: 9.5px;
+    opacity: .85;
     color: var(--ink-faint);
     text-align: center;
     padding-bottom: 10px;
@@ -841,6 +853,12 @@
     white-space: nowrap;
   }
   .tp-page-bar strong { font-size: 16px; font-weight: 700; }
+  .tp-homebar { flex-wrap: wrap; padding-top: 16px; }
+  .tp-homebar button.main {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
+  }
 
   .tp-outcome { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
   .tp-outcome button {
@@ -1158,7 +1176,7 @@
   <div id="tp-list"></div>
 
   <div class="tp-foot">
-    <button id="tp-openlist">날짜별 목록</button>
+    <button id="tp-openlist">\u2039 오늘 목록</button>
     <button id="tp-openstats">처리 이력</button>
     <button id="tp-more">⋯ 더보기</button>
   </div>
@@ -1829,6 +1847,27 @@
     el('tp-cal').innerHTML = h;
   }
 
+  var tapTimer = null;
+
+  /** 날짜 영역: 한 번 누르면 오늘, 두 번 누르면 달력 */
+  function dateTap() {
+    if (tapTimer) {
+      clearTimeout(tapTimer); tapTimer = null;
+      state.page = null;
+      state.tab = 'cal';
+      state.calMonth = state.date.slice(0, 7);
+      syncTabs(); render();
+      return;
+    }
+    tapTimer = setTimeout(function () {
+      tapTimer = null;
+      if (state.date === todayISO()) { info('이미 오늘입니다'); return; }
+      state.date = todayISO();
+      state.calMonth = state.date.slice(0, 7);
+      render();
+    }, 280);
+  }
+
   function shiftDate(delta) {
     var d = new Date(state.date + 'T00:00:00');
     d.setDate(d.getDate() + delta);
@@ -1854,7 +1893,7 @@
       if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       if (e.cancelable) e.preventDefault();   // 스와이프가 클릭으로 이어지지 않게
       state.swiped = true;
-      setTimeout(function () { state.swiped = false; }, 400);
+      setTimeout(function () { state.swiped = false; }, 250);
       shiftDate(dx < 0 ? 1 : -1);
       render();
     }, { passive: false });
@@ -2013,9 +2052,10 @@
     el('tp-page-bar').className = 'tp-strip';
     el('tp-page-bar').innerHTML =
       '<button class="arw" data-act="prevday" aria-label="이전 날">\u2039</button>' +
-      '<div class="mid"><div class="big">' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' +
-      days[d.getDay()] + '요일</div><div class="rel">' + relLabel(iso) +
-      ' · 전체 ' + list.length + '건</div></div>' +
+      '<button class="mid" data-act="datetap"><span class="big">' +
+      (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + days[d.getDay()] + '요일</span>' +
+      '<span class="rel">' + relLabel(iso) + ' · 전체 ' + list.length + '건</span>' +
+      '</button>' +
       '<button class="arw" data-act="nextday" aria-label="다음 날">\u203A</button>';
 
     var rows = list.map(function (t) {
@@ -2036,19 +2076,27 @@
     }).join('');
 
     el('tp-page-body').innerHTML =
-      '<div class="tp-swipe-hint">위쪽 날짜를 좌우로 넘기면 날짜가 바뀝니다<br>' +
-      '상태 칸을 누르면 진행·완료·위임·취소·지연을 고를 수 있습니다</div>' +
+      '<div class="tp-swipe-hint">날짜 — 한 번 누르면 오늘 · 두 번 누르면 달력 · 좌우로 넘기면 날짜 이동<br>' +
+      '상태 칸 — 누르면 진행·완료·위임·취소·지연을 고를 수 있습니다</div>' +
       (list.length
         ? '<div class="tp-tbl"><div class="tp-thead"><span>순위</span><span>내용</span><span>상태</span></div>' +
           rows + '</div>'
         : '<div class="tp-empty"><strong>이 날에는 할 일이 없습니다</strong>다른 날짜로 넘겨보세요.</div>') +
-      '<div class="tp-page-bar" style="padding-top:16px"><button data-act="pagehome">\u2039 홈으로</button>' +
-      '<button data-act="pagenew">이 날에 추가</button></div>';
+      '<div class="tp-page-bar tp-homebar">' +
+      '<button class="main" data-act="pagenew">이 날에 추가</button>' +
+      '<button data-act="gocal">달력</button>' +
+      '<button data-act="godone">완료함</button>' +
+      '<button data-act="gostats">처리 이력</button>' +
+      '<button data-act="gomore">\u22EF 더보기</button></div>';
   }
 
   function render() {
     var wrap = document.querySelector('.tp-wrap');
     wrap.className = 'tp-wrap' + (state.page ? ' on-page page-' + state.page : '');
+    if (state.page) {
+      el('tp-foot-more').className = 'tp-foot tp-fold';
+      el('tp-bk').classList.remove('on');
+    }
 
     if (state.page) { renderPage(); return; }
 
@@ -2509,6 +2557,16 @@
     if (act === 'pageback') { closeForm(); render(); return; }
     if (act === 'pagehome') { state.page = null; state.tab = 'day'; syncTabs(); render(); return; }
     if (act === 'pagenew') { openForm(null, 'list'); render(); return; }
+    if (act === 'gocal') { state.page = null; state.tab = 'cal'; state.calMonth = state.date.slice(0, 7); syncTabs(); render(); return; }
+    if (act === 'godone') { state.page = null; state.tab = 'done'; syncTabs(); render(); return; }
+    if (act === 'gostats') { state.page = 'stats'; render(); return; }
+    if (act === 'gomore') {
+      state.page = null; state.tab = 'day'; syncTabs(); render();
+      el('tp-foot-more').className = 'tp-foot tp-fold on';
+      el('tp-foot-more').scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (act === 'datetap') { dateTap(); return; }
 
     if (act === 'prog') {
       if ((t.progress || 0) >= 100) {
@@ -2945,12 +3003,18 @@
 
   function isOn(id) { return el(id).classList.contains('on'); }
 
+  /** 클래스가 아니라 실제로 화면에 그려져 있는지로 판정 */
+  function isShown(id) {
+    var e = el(id);
+    return !!e && e.classList.contains('on') && e.getClientRects().length > 0;
+  }
+
   /** 한 단계 뒤로. 더 물러날 곳이 없으면 false */
   function backStep() {
     if (isOn('tp-exit')) { el('tp-exit').classList.remove('on'); return true; }
     if (isOn('tp-modal')) { hidePermModal(); return true; }
-    if (isOn('tp-bk')) { el('tp-bk').classList.remove('on'); return true; }
-    if (isOn('tp-foot-more')) { el('tp-foot-more').className = 'tp-foot tp-fold'; return true; }
+    if (isShown('tp-bk')) { el('tp-bk').classList.remove('on'); return true; }
+    if (isShown('tp-foot-more')) { el('tp-foot-more').className = 'tp-foot tp-fold'; return true; }
 
     if (state.postponeOpen) { state.postponeOpen = null; render(); return true; }
     if (state.noteOpen) { state.noteOpen = null; render(); return true; }
