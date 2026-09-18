@@ -2076,8 +2076,7 @@
     }).join('');
 
     el('tp-page-body').innerHTML =
-      '<div class="tp-swipe-hint">날짜 — 한 번 누르면 오늘 · 두 번 누르면 달력 · 좌우로 넘기면 날짜 이동<br>' +
-      '상태 칸 — 누르면 진행·완료·위임·취소·지연을 고를 수 있습니다</div>' +
+      '<div class="tp-swipe-hint">날짜 클릭 오늘이동, 더블클릭 달력 이동, 좌우 스와이프 가능</div>' +
       (list.length
         ? '<div class="tp-tbl"><div class="tp-thead"><span>순위</span><span>내용</span><span>상태</span></div>' +
           rows + '</div>'
