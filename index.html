@@ -1004,6 +1004,15 @@
     </div>
   </div>
 
+  <div class="tp-modal" id="tp-ask">
+    <div class="tp-modal-card">
+      <h2 id="tp-ask-title">입력을 종료할까요?</h2>
+      <p id="tp-ask-body">작성 중인 내용은 저장되지 않습니다.</p>
+      <button class="prim" id="tp-ask-yes">예</button>
+      <button class="sec" id="tp-ask-no">아니오</button>
+    </div>
+  </div>
+
   <div class="tp-modal" id="tp-exit">
     <div class="tp-modal-card">
       <h2>앱을 종료할까요?</h2>
@@ -1017,7 +1026,7 @@
 
   <header>
     <div class="tp-eyebrow">할일관리</div>
-    <button class="tp-date" id="tp-date" data-act="cal" aria-label="달력 열기">불러오는 중</button>
+    <button class="tp-date" id="tp-date" data-act="datetap" aria-label="날짜">불러오는 중</button>
     <div class="tp-stat" id="tp-stat"></div>
     <button class="tp-today-btn" id="tp-today-btn">오늘로 돌아가기</button>
   </header>
@@ -1176,7 +1185,7 @@
   <div id="tp-list"></div>
 
   <div class="tp-foot">
-    <button id="tp-openlist">\u2039 오늘 목록</button>
+    <button id="tp-openlist">‹ 오늘 목록</button>
     <button id="tp-openstats">처리 이력</button>
     <button id="tp-more">⋯ 더보기</button>
   </div>
@@ -1848,23 +1857,50 @@
   }
 
   var tapTimer = null;
+  var pendingAsk = null;
+
+  function askConfirm(title, body, onYes) {
+    el('tp-ask-title').textContent = title;
+    el('tp-ask-body').textContent = body;
+    pendingAsk = onYes;
+    el('tp-ask').classList.add('on');
+  }
+
+  function goToday() {
+    if (state.date === todayISO()) { info('이미 오늘입니다'); return; }
+    state.date = todayISO();
+    state.calMonth = state.date.slice(0, 7);
+    render();
+  }
+
+  function goCalendar() {
+    state.page = null;
+    state.tab = 'cal';
+    state.calMonth = state.date.slice(0, 7);
+    syncTabs(); render();
+  }
+
+  /** 입력 중이면 먼저 확인을 받는다 */
+  function runDateAction(fn) {
+    if (el('tp-form').classList.contains('on')) {
+      askConfirm('입력을 종료할까요?', '작성 중인 내용은 저장되지 않습니다.', function () {
+        closeForm(); syncTabs(); fn();
+      });
+      return;
+    }
+    fn();
+  }
 
   /** 날짜 영역: 한 번 누르면 오늘, 두 번 누르면 달력 */
   function dateTap() {
     if (tapTimer) {
       clearTimeout(tapTimer); tapTimer = null;
-      state.page = null;
-      state.tab = 'cal';
-      state.calMonth = state.date.slice(0, 7);
-      syncTabs(); render();
+      runDateAction(goCalendar);
       return;
     }
     tapTimer = setTimeout(function () {
       tapTimer = null;
-      if (state.date === todayISO()) { info('이미 오늘입니다'); return; }
-      state.date = todayISO();
-      state.calMonth = state.date.slice(0, 7);
-      render();
+      runDateAction(goToday);
     }, 280);
   }
 
@@ -2522,11 +2558,6 @@
       if (state.tab === 'cal') state.calMonth = state.date.slice(0, 7);
       syncTabs(); render(); return;
     }
-    if (b.dataset.act === 'cal') {
-      state.tab = 'cal';
-      state.calMonth = state.date.slice(0, 7);
-      syncTabs(); render(); return;
-    }
     if (b.dataset.sc) { setScope(b.dataset.sc); return; }
     if (b.dataset.own !== undefined) { state.owner = b.dataset.own || null; render(); return; }
     if (b.dataset.pd) { state.period = b.dataset.pd; render(); return; }
@@ -3010,6 +3041,7 @@
 
   /** 한 단계 뒤로. 더 물러날 곳이 없으면 false */
   function backStep() {
+    if (isOn('tp-ask')) { pendingAsk = null; el('tp-ask').classList.remove('on'); return true; }
     if (isOn('tp-exit')) { el('tp-exit').classList.remove('on'); return true; }
     if (isOn('tp-modal')) { hidePermModal(); return true; }
     if (isShown('tp-bk')) { el('tp-bk').classList.remove('on'); return true; }
@@ -3054,6 +3086,18 @@
   }
 
   function showExit() { el('tp-exit').classList.add('on'); }
+
+  el('tp-ask-no').addEventListener('click', function () {
+    pendingAsk = null;
+    el('tp-ask').classList.remove('on');
+  });
+
+  el('tp-ask-yes').addEventListener('click', function () {
+    var fn = pendingAsk;
+    pendingAsk = null;
+    el('tp-ask').classList.remove('on');
+    if (fn) fn();
+  });
 
   el('tp-exit-no').addEventListener('click', function () {
     el('tp-exit').classList.remove('on');
