@@ -457,6 +457,91 @@
   }
   .tp-sortbtn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
 
+  /* 달력 탭에서는 등록·정렬·담당 필터를 감춘다 */
+  .tp-wrap.tab-cal > .tp-open,
+  .tp-wrap.tab-cal > .tp-owners,
+  .tp-wrap.tab-cal .tp-sortbtn { display: none !important; }
+
+  /* 달력 아래 그 날의 할 일 */
+  .tp-daypanel {
+    margin-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .tp-dp-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 12px 2px 9px;
+    flex-wrap: wrap;
+  }
+  .tp-dp-head strong { font-size: 15px; font-weight: 700; }
+  .tp-dp-head span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    flex: 1;
+  }
+  .tp-dp-head button {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 10px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tp-dp-body {
+    max-height: 44vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    background: var(--card);
+  }
+  .tp-dp-row {
+    display: grid;
+    grid-template-columns: 42px 1fr 68px;
+    align-items: center;
+    width: 100%;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--line-soft);
+    padding: 0;
+    font-family: var(--sans);
+    text-align: left;
+    cursor: pointer;
+  }
+  .tp-dp-row:last-child { border-bottom: 0; }
+  .tp-dp-row > * { padding: 10px 5px; }
+  .tp-dp-row .pr {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .tp-dp-row[data-prio^="A"] .pr { color: var(--stamp); }
+  .tp-dp-row .t {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-left: 8px;
+  }
+  .tp-dp-row.is-done .t { color: var(--ink-faint); text-decoration: line-through; }
+  .tp-dp-row .st { text-align: center; }
+  .tp-dp-empty {
+    padding: 22px 12px;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+
   .tp-task {
     display: flex;
     gap: 12px;
@@ -1852,7 +1937,33 @@
         '<span class="dots">' + dots + '</span></button>';
     }
 
-    h += '</div><p class="tp-cal-hint">날짜를 누르면 그 날 목록으로 이동합니다<br>붉은 점은 A 우선순위가 있는 날입니다</p>';
+    h += '</div><p class="tp-cal-hint">날짜를 누르면 아래에서 그 날의 할 일을 볼 수 있습니다<br>붉은 점은 A 우선순위가 있는 날입니다</p>';
+
+    // 선택한 날의 할 일 (완료·위임·취소 포함)
+    var dayAll = state.tasks.filter(function (t) { return t.on === state.date; })
+      .sort(function (a, b) {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        var r = prioRank(a.prio) - prioRank(b.prio);
+        return r !== 0 ? r : (a.seq || 0) - (b.seq || 0);
+      });
+    var openN = dayAll.filter(function (t) { return !t.done; }).length;
+    var sd = isoToDate(state.date);
+
+    h += '<div class="tp-daypanel"><div class="tp-dp-head">' +
+      '<strong>' + (sd.getMonth() + 1) + '월 ' + sd.getDate() + '일 ' + DOW[sd.getDay()] + '</strong>' +
+      '<span>전체 ' + dayAll.length + '건 · 미완료 ' + openN + '건</span>' +
+      '<button data-act="opendaylist">이 날 목록 열기</button></div>';
+
+    h += '<div class="tp-dp-body">' + (dayAll.length
+      ? dayAll.map(function (t) {
+          return '<button class="tp-dp-row' + (t.done ? ' is-done' : '') +
+            '" data-prio="' + esc(t.prio) + '" data-act="edit" data-id="' + t.id + '">' +
+            '<span class="pr">' + (t.done ? '\u2713' : esc(t.prio)) + '</span>' +
+            '<span class="t">' + esc(String(t.title).split('\n')[0]) + '</span>' +
+            '<span class="st">' + statusChip(t) + '</span></button>';
+        }).join('')
+      : '<div class="tp-dp-empty">이 날에는 등록된 할 일이 없습니다</div>') + '</div></div>';
+
     el('tp-cal').innerHTML = h;
   }
 
@@ -2127,7 +2238,7 @@
 
   function render() {
     var wrap = document.querySelector('.tp-wrap');
-    wrap.className = 'tp-wrap' + (state.page ? ' on-page page-' + state.page : '');
+    wrap.className = 'tp-wrap' + (state.page ? ' on-page page-' + state.page : ' tab-' + state.tab);
     if (state.page) {
       el('tp-foot-more').className = 'tp-foot tp-fold';
       el('tp-bk').classList.remove('on');
@@ -2456,7 +2567,7 @@
 
   function openForm(t, from) {
     state.editFrom = from || 'main';
-    if (state.editFrom === 'list') state.page = 'edit';
+    if (state.editFrom === 'list' || state.editFrom === 'cal') state.page = 'edit';
     state.editId = t ? t.id : null;
     el('tp-form').classList.add('on');
     el('tp-open').style.display = 'none';
@@ -2510,7 +2621,14 @@
   }
 
   function closeForm() {
-    if (state.page === 'edit') state.page = state.editFrom === 'list' ? 'list' : null;
+    if (state.page === 'edit') {
+      if (state.editFrom === 'list') {
+        state.page = 'list';
+      } else {
+        state.page = null;
+        if (state.editFrom === 'cal') state.tab = 'cal';
+      }
+    }
     state.editFrom = 'main';
     state.editId = null;
     el('tp-form').classList.remove('on');
@@ -2563,11 +2681,13 @@
     if (b.dataset.pd) { state.period = b.dataset.pd; render(); return; }
     if (b.dataset.date) {
       state.date = b.dataset.date;
-      state.tab = 'day';
       state.noteOpen = null;
       if (el('tp-form').classList.contains('on')) el('tp-on').value = state.date;
+      // 달력에서는 아래 목록만 바꾸고 화면을 유지한다
+      if (state.tab !== 'cal') state.tab = 'day';
       syncTabs(); render(); return;
     }
+    if (b.dataset.act === 'opendaylist') { state.page = 'list'; render(); return; }
     if (b.dataset.mon) {
       state.calMonth = addMonth(state.calMonth, Number(b.dataset.mon));
       renderCal(); return;
@@ -2576,7 +2696,10 @@
     var act = b.dataset.act, t = b.dataset.id ? find(b.dataset.id) : null;
     if (!act || (b.dataset.id && !t)) return;
 
-    if (act === 'edit') { openForm(t, state.page === 'list' ? 'list' : 'main'); render(); return; }
+    if (act === 'edit') {
+      openForm(t, state.page === 'list' ? 'list' : (state.tab === 'cal' ? 'cal' : 'main'));
+      render(); return;
+    }
     if (act === 'step') {
       state.stepOpen = state.stepOpen === t.id ? null : t.id;
       state.postponeOpen = null;
