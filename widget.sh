@@ -340,7 +340,8 @@ public class DoListWidget extends AppWidgetProvider {
                             it.label = it.lateDays > 0 ? it.lateDays + "일 지연" : "오늘";
                             if (it.lateDays > 0) late++;
                             todayList.add(it);
-                        } else if (it.aheadDays <= 7) {
+                        } else if (it.aheadDays <= 7 && !it.repeat) {
+                            // 내일 이후 구역에서는 반복 업무를 제외한다
                             it.label = shortDate(it.on);
                             nextList.add(it);
                         }
@@ -354,10 +355,9 @@ public class DoListWidget extends AppWidgetProvider {
                             return r != 0 ? r : a.on.compareTo(b.on);
                         }
                     });
-                    // 반복 업무는 맨 아래로, 그 위에서는 우선순위 순
+                    // 우선순위 순, 같으면 날짜 순
                     Collections.sort(nextList, new Comparator<Item>() {
                         public int compare(Item a, Item b) {
-                            if (a.repeat != b.repeat) return a.repeat ? 1 : -1;
                             int r = prioRank(a.prio) - prioRank(b.prio);
                             return r != 0 ? r : a.on.compareTo(b.on);
                         }

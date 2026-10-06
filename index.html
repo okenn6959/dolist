@@ -2244,6 +2244,7 @@
       '<button class="arw" data-act="nextday" aria-label="다음 날">\u203A</button>';
 
     var rows = list.map(function (t) {
+      var closed = t.done && iso === endDateOf(t);   // 그 날 처리된 건만 완료 모양
       var meta = [];
       if (t.owner) meta.push(esc(t.owner));
       if (t.remind && !t.done) {
@@ -2251,9 +2252,9 @@
       }
       if (t.on && t.on !== iso) meta.push('표시 ' + esc(fmtDue(t.on)));
       if (t.rid) meta.push('\u21BB 반복');
-      return '<div class="tp-tr' + (t.done ? ' is-done' : '') + '" data-prio="' + esc(t.prio) + '">' +
+      return '<div class="tp-tr' + (closed ? ' is-done' : '') + '" data-prio="' + esc(t.prio) + '">' +
         '<button class="pr" data-act="edit" data-id="' + t.id + '">' +
-        (t.done ? '\u2713' : esc(t.prio)) + '</button>' +
+        (closed ? '\u2713' : esc(t.prio)) + '</button>' +
         '<button class="ct" data-act="edit" data-id="' + t.id + '">' + esc(t.title) +
         (meta.length ? '<em>' + meta.join(' · ') + '</em>' : '') + '</button>' +
         '<button class="st" data-act="step" data-id="' + t.id + '">' + statusChip(t, iso) + '</button></div>' +
