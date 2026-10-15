@@ -2314,6 +2314,7 @@
     if (!title) { el('tp-title').focus(); return; }
     var owner = el('tp-owner').value.trim();
     if (owner) localStorage.setItem(OWNER, owner);
+    var viewDate = state.date;   // 수정 전 보고 있던 날짜
 
     if (state.editId) {
       var t = find(state.editId);
@@ -2351,8 +2352,8 @@
           info('이후 ' + changed + '건에도 함께 적용했습니다');
         }
 
-        // 처리된 항목은 종료 날짜 화면으로 간다
-        state.date = endDateOf(t);
+        // 보고 있던 날짜에 그대로 남아 있으면 화면을 옮기지 않는다
+        state.date = showsOn(t, viewDate) ? viewDate : endDateOf(t);
         state.calMonth = state.date.slice(0, 7);
         state.tab = 'day';
 
