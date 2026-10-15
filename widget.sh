@@ -336,6 +336,7 @@ public class DoListWidget extends AppWidgetProvider {
                         if (it.lateDays < 0) it.lateDays = 0;
                         it.aheadDays = (int) (onJ - todayJ);
 
+                        if (it.aheadDays < 0 && it.repeat) continue;  // 지난 반복분은 제외
                         if (it.aheadDays <= 0) {
                             it.label = it.lateDays > 0 ? it.lateDays + "일 지연" : "오늘";
                             if (it.lateDays > 0) late++;

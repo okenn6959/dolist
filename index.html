@@ -2098,9 +2098,12 @@
     if (t.done) {
       var end = endDateOf(t);
       if (d === end) return true;                      // 종료 날짜 = 처리 표시
+      if (t.rid) return false;                         // 반복은 구간을 만들지 않는다
       return !!(t.due && d > t.due && d < end);        // 지연 ~ 완료 사이
     }
     if (d === t.on) return true;
+    // 반복 항목은 그 날짜 몫이 따로 생기므로 이월하지 않는다
+    if (t.rid) return false;
     if (d === todayISO()) return true;                 // 미완료는 오늘로 이월
     return !!(t.due && d > t.due && d <= todayISO());  // 마감 넘긴 뒤 매일
   }
@@ -2315,6 +2318,7 @@
     if (state.editId) {
       var t = find(state.editId);
       if (t) {
+        var prevOn = t.on;
         t.title = title;
         t.owner = owner;
         t.prio = state.prio;
@@ -2322,6 +2326,9 @@
         t.due = el('tp-due').value || null;
         t.remind = el('tp-remind').value || null;
         applyState(t, el('tp-state').value);
+
+        // 반복 회차를 다른 날짜로 옮기면 그 건은 반복에서 분리한다 (규칙 처리 뒤에 적용)
+        var detachRepeat = !!(t.rid && state.scope !== 'all' && t.on !== prevOn);
 
         // 반복 항목: 이후 전체 적용
         if (t.rid && state.scope === 'all') {
@@ -2344,7 +2351,8 @@
           info('이후 ' + changed + '건에도 함께 적용했습니다');
         }
 
-        state.date = t.on;
+        // 처리된 항목은 종료 날짜 화면으로 간다
+        state.date = endDateOf(t);
         state.calMonth = state.date.slice(0, 7);
         state.tab = 'day';
 
@@ -2382,6 +2390,11 @@
             var m2 = syncRules();
             info(ruleText(nr) + ' 반복 설정 · 예정 ' + m2 + '건 생성');
           }
+        }
+
+        if (detachRepeat) {
+          t.rid = null;
+          info('날짜를 옮겨 이 건은 반복에서 분리했습니다');
         }
       }
       closeForm();
