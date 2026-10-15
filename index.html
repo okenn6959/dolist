@@ -2612,6 +2612,10 @@
     document.querySelectorAll('#tp-scope button').forEach(function (x) {
       x.setAttribute('aria-pressed', x.dataset.sc === v ? 'true' : 'false');
     });
+    var onRoutine = el('tp-scope').classList.contains('on');
+    el('tp-del').textContent = (onRoutine && v === 'all')
+      ? '이 날짜 이후 반복분 모두 삭제'
+      : '이 할 일 삭제';
   }
 
   function syncPrio() {
@@ -2848,10 +2852,26 @@
   el('tp-del').addEventListener('click', function () {
     var t = state.editId ? find(state.editId) : null;
     if (!t) { closeForm(); render(); return; }
-    state.tasks = state.tasks.filter(function (x) { return x.id !== t.id; });
+
+    var removed = 1;
+    if (t.rid && state.scope === 'all') {
+      // 이후 전체: 이 날짜 이후의 미완료 반복분을 모두 지우고 반복을 중단한다
+      var rid = t.rid, from = t.on, before = state.tasks.length;
+      state.tasks = state.tasks.filter(function (x) {
+        if (x.id === t.id) return false;
+        return !(x.rid === rid && !x.done && x.on >= from);
+      });
+      removed = before - state.tasks.length;
+      var rl = findRule(rid);
+      if (rl) { rl.active = false; saveRules(); }
+    } else {
+      state.tasks = state.tasks.filter(function (x) { return x.id !== t.id; });
+    }
     closeForm();
     syncTabs(); render(); save(); syncNotifications();
-    info('삭제했습니다');
+    info(removed > 1
+      ? '이후 반복분 ' + removed + '건을 삭제하고 반복을 중단했습니다'
+      : '삭제했습니다');
   });
 
   el('tp-rep').addEventListener('click', function (e) {
